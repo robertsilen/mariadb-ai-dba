@@ -92,8 +92,8 @@ Scale verbosity to the findings: a healthy server with no issues deserves a comp
 Use the `AskUserQuestion` tool to ask whether to save the summary as a report file — never print the options as a text list:
 
 1. **No, don't create a report** (default)
-2. **Yes, create `report.md`** — write to `report.md` in the current directory; overwrite if it exists
-3. **Yes, create a timestamped report** — write to `report-YYMMDD-HHMMSS.md`; never overwrites
+2. **Yes, create `mariadb-audit.md`** — write to `mariadb-audit.md` in the current directory; overwrite if it exists
+3. **Yes, create a timestamped report** — write to `mariadb-audit-YYMMDD-HHMMSS.md`; never overwrites
 
 If option 2 or 3: get the timestamp via `date +%y%m%d-%H%M%S` (Bash), write the summary using the Write tool with a header containing hostname, version, and timestamp, then confirm the filename.
 
@@ -135,7 +135,7 @@ Track which paths have already been run in this session and append " (already do
 
 Options to include in the `AskUserQuestion` call:
 
-1. **Add findings to report.md** — append the findings from the path just completed to `report.md` in the current directory; create the file if it does not exist. Include a section heading with the path name and a timestamp.
+1. **Add findings to mariadb-audit.md** — append the findings from the path just completed to `mariadb-audit.md` in the current directory; create the file if it does not exist. Include a section heading with the path name and a timestamp.
 2. **Dig deeper** — explore a specific finding, question, or area mentioned in the analysis just completed
 3. **Server overview** — append " (already done — redo?)" if already run
 4. **Query optimization** — append " (already done — redo?)" if already run
