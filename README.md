@@ -38,29 +38,9 @@ To make the skill available from any directory, symlink it into your skills dire
 ln -s /path/to/mariadb-ai-dba/skills/mariadb-ai-dba ~/.claude/skills/mariadb-ai-dba
 ```
 
-Also install the companion skills from [github.com/mariadb/skills](https://github.com/mariadb/skills) for deeper MariaDB-specific analysis:
+Also install the companion skills from [github.com/mariadb/skills](https://github.com/mariadb/skills) for deeper MariaDB-specific analysis.
 
-```bash
-ln -s /path/to/mariadb-skills/mariadb-features ~/.claude/skills/mariadb-features
-ln -s /path/to/mariadb-skills/mariadb-query-optimization ~/.claude/skills/mariadb-query-optimization
-ln -s /path/to/mariadb-skills/mysql-to-mariadb ~/.claude/skills/mysql-to-mariadb
-```
-
-Then from any directory:
-- "Analyze my MariaDB server"
-- "Run a database health check"
-- "Audit my MariaDB security"
-
-### Claude Desktop (claude.ai app)
-
-Claude Desktop does not support skills or the Bash tool, so this skill cannot run there directly. Two alternatives:
-
-1. **Use Claude Code instead** — it has shell access and skill support, which is what this tool needs.
-
-2. **Use the [MariaDB MCP Server](https://github.com/MariaDB/mcp)** — this gives Claude Desktop a database connection via MCP. You can paste the diagnostic queries from `skills/mariadb-ai-dba/references/` into the conversation manually, or add them as Project instructions. Setup:
-   - Install the MCP server following its README
-   - Add it to Claude Desktop's MCP config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS)
-   - Start a conversation and ask Claude to analyze your database
+Then from any directory: "Analyze my MariaDB server", "Run a database health check", "Audit my MariaDB security".
 
 ## Security
 

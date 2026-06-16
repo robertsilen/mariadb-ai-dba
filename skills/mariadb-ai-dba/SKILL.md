@@ -16,6 +16,7 @@ These override everything else in this skill.
 - **Evidence-Based.** Only report results you actually observed in query output. Never assume a query succeeded without checking. Never fabricate metrics.
 - **Credential Safety.** Never write passwords or connection strings into files, tracking documents, or conversation history beyond the initial Bash invocation. Recommend `--defaults-file` or socket auth when possible.
 - **Context Hygiene.** Keep conversation concise. Present summaries and findings, not walls of raw query output. If the user wants raw data, offer it — don't dump it unprompted.
+- **Plain Language.** Explain every abbreviation, acronym, or technical shorthand on first use — both in conversation output and in written report files — by appending the expansion in parentheses. Examples: InnoDB (MariaDB's default storage engine), BP (buffer pool), MB (megabytes), GB (gigabytes), SSL (Secure Sockets Layer), GTID (Global Transaction ID), DML (Data Manipulation Language), DDL (Data Definition Language), QPS (queries per second), I/O (input/output). Apply this to metric names, status variable names surfaced to the user, and any other jargon a non-DBA reader might not know.
 - **Fail Loud.** If a connection fails, a query errors, or a metric is unavailable, report the exact error. Do not skip silently or guess values.
 
 ## Preamble: Load companion skills
