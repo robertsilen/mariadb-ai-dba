@@ -30,7 +30,7 @@ If either skill is not installed, continue without it and note which one was mis
 
 ## Phase 0: Connection
 
-**Always ask the user how to connect before running any queries.** Do not auto-connect. Present these options:
+**Always ask the user how to connect before running any queries.** Do not auto-connect. Use the `AskUserQuestion` tool to present these options — never print them as a text list:
 
 1. **Local MariaDB** — connect via `mariadb` with no arguments (local socket auth, typical for development)
 2. **Defaults file** — provide a path to a `.my.cnf` file (recommended for production; keeps credentials out of process list)
@@ -48,7 +48,7 @@ Once connected, always include `--batch --skip-column-names --force` in subseque
 
 ## Phase 1: Choose a path
 
-Once connected, present these four options and ask the user what they want to do:
+Once connected, use the `AskUserQuestion` tool to ask what the user wants to do — never print the options as a text list:
 
 1. **Server overview** — fetch server state, storage, connections, buffer pool, and replication status; flag anything notable
 2. **Query optimization** — analyze slow queries, missing indexes, and execution plans
@@ -58,6 +58,12 @@ Once connected, present these four options and ask the user what they want to do
 Wait for the user to choose, then proceed to Phase 2.
 
 ## Phase 2: Execute chosen path
+
+Every path follows the same three-step structure:
+
+1. **Collect** — run diagnostic queries against the live server to gather evidence
+2. **Present** — summarise what was found clearly and concisely; no raw query dumps
+3. **Recommend** — make concrete, actionable recommendations based only on what was observed; cross-reference the companion skills loaded in the Preamble to ensure recommendations are MariaDB-specific
 
 ### Path 1 — Server overview
 
@@ -83,7 +89,7 @@ Scale verbosity to the findings: a healthy server with no issues deserves a comp
 
 **After the summary — report prompt:**
 
-Ask whether to save the summary as a report file:
+Use the `AskUserQuestion` tool to ask whether to save the summary as a report file — never print the options as a text list:
 
 1. **No, don't create a report** (default)
 2. **Yes, create `report.md`** — write to `report.md` in the current directory; overwrite if it exists
@@ -93,14 +99,7 @@ If option 2 or 3: get the timestamp via `date +%y%m%d-%H%M%S` (Bash), write the 
 
 **After the report prompt — what next:**
 
-Ask if the user wants to continue with one of the other paths:
-
-1. **Query optimization**
-2. **MariaDB feature suggestions**
-3. **Security audit**
-4. **Nothing — I'm done**
-
-If they pick 1, 2, or 3, proceed with that path below.
+Present the what-next menu (see below).
 
 ---
 
@@ -108,14 +107,40 @@ If they pick 1, 2, or 3, proceed with that path below.
 
 Read `references/query-optimization.md` for the instructions and queries for this path.
 
+After completing, present the what-next menu.
+
 ---
 
 ### Path 3 — MariaDB feature suggestions
 
 Read `references/feature-suggestions.md` for the instructions and queries for this path.
 
+After completing, present the what-next menu.
+
 ---
 
 ### Path 4 — Security audit
 
 Read `references/security-audit.md` for the instructions and queries for this path.
+
+After completing, present the what-next menu.
+
+---
+
+## What-next menu
+
+After completing any path, always use the `AskUserQuestion` tool to present this menu — never print it as a text list. This ensures the user gets a proper interactive menu to click rather than a numbered list to read.
+
+Track which paths have already been run in this session and append " (already done — redo?)" to their label.
+
+Options to include in the `AskUserQuestion` call:
+
+1. **Add findings to report.md** — append the findings from the path just completed to `report.md` in the current directory; create the file if it does not exist. Include a section heading with the path name and a timestamp.
+2. **Dig deeper** — explore a specific finding, question, or area mentioned in the analysis just completed
+3. **Server overview** — append " (already done — redo?)" if already run
+4. **Query optimization** — append " (already done — redo?)" if already run
+5. **MariaDB feature suggestions** — append " (already done — redo?)" if already run
+6. **Security audit** — append " (already done — redo?)" if already run
+7. **Nothing — I'm done**
+
+Never drop paths from the list. Execute whichever option the user picks.
