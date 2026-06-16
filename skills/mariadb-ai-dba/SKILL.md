@@ -51,7 +51,7 @@ Use the `AskUserQuestion` tool with **multiSelect: true**. If the user selects n
 
 Header: "Audit scope"
 
-Question: "Select which analysis to include in the audit. A timestamped report file will be generated at the end with all findings."
+Question: "Select which data collection paths to include in the audit. A timestamped report file will be generated at the end with all findings."
 
 Options (exactly 4 — do not add any extra options):
 
