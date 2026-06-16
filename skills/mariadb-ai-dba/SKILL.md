@@ -47,13 +47,11 @@ Then invoke each skill. If the clone or symlink fails, report the error and cont
 
 ## Phase 0: Choose audit scope
 
-First, tell the user: "By default, the audit runs **all four paths**. You can deselect any you want to skip."
-
-Then use the `AskUserQuestion` tool with **multiSelect: true**. The tool does not support pre-selecting options, so the text above sets the expectation. If the user clicks through without selecting anything (or selects "Other" with no text), treat it as **all four selected**.
+Use the `AskUserQuestion` tool with **multiSelect: true**. If the user selects nothing or selects "Other" with no text, run all four paths.
 
 Header: "Audit scope"
 
-Question: "Deselect any paths you want to skip. Leave all selected for a full audit. A report file will be generated at the end."
+Question: "Select which analysis to include in the audit. A timestamped report file will be generated at the end with all findings."
 
 Options (exactly 4 — do not add any extra options):
 
