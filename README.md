@@ -15,7 +15,7 @@ When activated, the AI DBA will:
 3. Run all selected paths and collect diagnostic data
 4. Generate a timestamped audit report (`mariadb-audit_{timestamp}.md`) with findings, severity ratings, and actionable recommendations
 
-All queries are read-only. The skill never modifies data, schema, or configuration.
+All queries are read-only. The skill never modifies data, schema, or configuration. Use a [read-only database user](#security) to be sure.
 
 Companion skills from [github.com/MariaDB/skills](https://github.com/MariaDB/skills) are loaded automatically for deeper MariaDB-specific analysis. If not installed, the skill offers to fetch them from GitHub.
 
