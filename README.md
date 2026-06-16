@@ -9,7 +9,7 @@ When activated, the AI DBA will:
 1. Load MariaDB-specific knowledge from companion skills (`mariadb-features`, `mariadb-query-optimization`, `mysql-to-mariadb`)
 2. Ask for your connection details
 3. Present four paths to choose from:
-   - **Server overview** — server state, storage engines, connections, buffer pool, replication, and health flags; option to save a report file
+   - **Server overview** — server state, storage engines, connections, buffer pool, replication, and health flags
    - **Query optimization** — slow queries, missing indexes, execution plan analysis
    - **MariaDB feature suggestions** — inspects your schemas and identifies concrete improvements using MariaDB-native capabilities
    - **Security audit** — users, grants, privileges, SSL status, and authentication configuration
