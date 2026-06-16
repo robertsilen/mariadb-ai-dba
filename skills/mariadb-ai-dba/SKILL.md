@@ -47,20 +47,22 @@ Then invoke each skill. If the clone or symlink fails, report the error and cont
 
 ## Phase 0: Choose audit scope
 
-Use the `AskUserQuestion` tool with **multiSelect: true** to let the user choose which analysis paths to include. Never print the options as a text list.
+First, tell the user: "By default, the audit runs **all four paths**. You can deselect any you want to skip."
+
+Then use the `AskUserQuestion` tool with **multiSelect: true**. The tool does not support pre-selecting options, so the text above sets the expectation. If the user clicks through without selecting anything (or selects "Other" with no text), treat it as **all four selected**.
 
 Header: "Audit scope"
 
-Question: "Choose which analysis paths to include in the audit. A report file will be generated at the end with all findings."
+Question: "Deselect any paths you want to skip. Leave all selected for a full audit. A report file will be generated at the end."
 
-Options (all selected by default):
+Options (exactly 4 — do not add any extra options):
 
 1. **Server overview** — server state, InnoDB health, connections, buffer pool, replication, and performance counters
 2. **Query optimization** — slow query config, missing indexes, schema analysis, duplicate indexes, and execution plans
 3. **MariaDB feature suggestions** — inspect schemas and identify improvements using MariaDB-specific capabilities
 4. **Security audit** — users, grants, privileges, SSL status, authentication, and access control
 
-All four paths are selected by default. If the user deselects some, only run the selected ones. If the user selects none, suggest selecting all.
+If the user selects none or does not interact with the checkboxes, run all four paths.
 
 ## Phase 1: Connect
 
