@@ -56,7 +56,7 @@ Question: "Select which analysis to include in the audit. A timestamped report f
 Options (exactly 4 — do not add any extra options):
 
 1. **Server overview** — server state, InnoDB health, connections, buffer pool, replication, and performance counters
-2. **Query optimization** — slow query config, missing indexes, schema analysis, duplicate indexes, and execution plans
+2. **Query optimization** — slow query config, missing indexes, schema analysis, duplicate indexes, and Performance Schema statement profiling (if enabled)
 3. **MariaDB feature suggestions** — inspect schemas and identify improvements using MariaDB-specific capabilities
 4. **Security audit** — users, grants, privileges, SSL status, authentication, and access control
 
