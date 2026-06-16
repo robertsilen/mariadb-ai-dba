@@ -1,26 +1,27 @@
 # MariaDB AI DBA
 
-An AI-powered database administrator skill for Claude Code. Connects to a MariaDB server and provides analysis across four areas: server overview, query optimization, MariaDB feature suggestions, and security audit.
+An AI-powered database administrator skill for Claude Code. Connects to a MariaDB server and produces a comprehensive audit report covering server health, query optimization, security, and MariaDB-specific feature opportunities.
 
 ## What It Does
 
 When activated, the AI DBA will:
 
-1. Load MariaDB-specific knowledge from companion skills (`mariadb-features`, `mariadb-query-optimization`, `mysql-to-mariadb`)
-2. Ask for your connection details
-3. Present four paths to choose from:
-   - **Server overview** — server state, storage engines, connections, buffer pool, replication, and health flags
-   - **Query optimization** — slow queries, missing indexes, execution plan analysis
-   - **MariaDB feature suggestions** — inspects your schemas and identifies concrete improvements using MariaDB-native capabilities
+1. Ask which analysis paths to include (multi-select, all selected by default):
+   - **Server overview** — server state, InnoDB health, connections, buffer pool, replication, and performance counters
+   - **Query optimization** — slow query config, missing indexes, schema analysis, duplicate indexes, and Performance Schema statement digests
+   - **MariaDB feature suggestions** — inspects schemas and identifies improvements using MariaDB-native capabilities
    - **Security audit** — users, grants, privileges, SSL status, and authentication configuration
+2. Ask for connection details
+3. Run all selected paths and collect diagnostic data
+4. Generate a timestamped audit report (`mariadb-audit_{timestamp}.md`) with findings, severity ratings, and actionable recommendations
 
 All queries are read-only. The skill never modifies data, schema, or configuration.
+
+Companion skills from [github.com/MariaDB/skills](https://github.com/MariaDB/skills) are loaded automatically for deeper MariaDB-specific analysis. If not installed, the skill offers to fetch them from GitHub.
 
 ## How to Use
 
 ### Quick start (run from the repo)
-
-Clone the repo and run directly — no installation needed:
 
 ```bash
 git clone https://github.com/mariadb/mariadb-ai-dba.git
@@ -28,7 +29,7 @@ cd mariadb-ai-dba
 claude "dba"
 ```
 
-That's it. Claude reads the skill from the repo and walks you through connecting.
+That's it. Claude reads the skill from the repo and walks you through the audit.
 
 ### Install as a skill (optional)
 
@@ -37,8 +38,6 @@ To make the skill available from any directory, symlink it into your skills dire
 ```bash
 ln -s /path/to/mariadb-ai-dba/skills/mariadb-ai-dba ~/.claude/skills/mariadb-ai-dba
 ```
-
-Also install the companion skills from [github.com/mariadb/skills](https://github.com/mariadb/skills) for deeper MariaDB-specific analysis.
 
 Then from any directory: "Analyze my MariaDB server", "Run a database health check", "Audit my MariaDB security".
 
@@ -80,4 +79,3 @@ Pass it to the skill when prompted: choose **Defaults file** and provide the pat
 - `mariadb` command-line client installed and on your PATH
 - Network access to the target MariaDB server
 - A database user with at least read privileges (see [Security](#security) above for the recommended setup)
-- Companion skills installed (see [How to Use](#how-to-use) above); the skill works without them but analysis will be less MariaDB-specific

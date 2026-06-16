@@ -21,15 +21,48 @@ These override everything else in this skill.
 
 ## Preamble: Load companion skills
 
-Before doing anything else, invoke these two skills to load their knowledge into context. They inform your analysis throughout all phases:
+Before doing anything else, attempt to invoke these skills to load their knowledge into context. They inform your analysis throughout all phases:
 
 - `mariadb-features` — MariaDB-specific features and capabilities
 - `mariadb-query-optimization` — query optimization techniques for MariaDB
 - `mysql-to-mariadb` — MySQL/MariaDB compatibility guide; ensures recommendations use MariaDB-native approaches rather than MySQL habits
 
-If either skill is not installed, continue without it and note which one was missing.
+If any skill is not installed, use the `AskUserQuestion` tool to ask the user:
 
-## Phase 0: Connection
+Question: "Companion skills not found: {list missing skills}. These improve the analysis with MariaDB-specific knowledge. Want to install them from GitHub?"
+
+Options:
+1. **Yes, install from GitHub** — clone `https://github.com/MariaDB/skills.git` into a temporary location, then symlink the missing skills into `~/.claude/skills/`. After symlinking, invoke the skills to load them.
+2. **No, skip** — continue without them; analysis will be less MariaDB-specific.
+
+If the user chooses to install, run:
+```bash
+git clone --depth 1 https://github.com/MariaDB/skills.git /tmp/mariadb-skills
+```
+Then for each missing skill, symlink:
+```bash
+ln -s /tmp/mariadb-skills/skills/{skill-name} ~/.claude/skills/{skill-name}
+```
+Then invoke each skill. If the clone or symlink fails, report the error and continue without.
+
+## Phase 0: Choose audit scope
+
+Use the `AskUserQuestion` tool with **multiSelect: true** to let the user choose which analysis paths to include. Never print the options as a text list.
+
+Header: "Audit scope"
+
+Question: "Choose which analysis paths to include in the audit. A report file will be generated at the end with all findings."
+
+Options (all selected by default):
+
+1. **Server overview** — server state, InnoDB health, connections, buffer pool, replication, and performance counters
+2. **Query optimization** — slow query config, missing indexes, schema analysis, duplicate indexes, and execution plans
+3. **MariaDB feature suggestions** — inspect schemas and identify improvements using MariaDB-specific capabilities
+4. **Security audit** — users, grants, privileges, SSL status, authentication, and access control
+
+All four paths are selected by default. If the user deselects some, only run the selected ones. If the user selects none, suggest selecting all.
+
+## Phase 1: Connect
 
 **Always ask the user how to connect before running any queries.** Do not auto-connect. Use the `AskUserQuestion` tool to present these options — never print them as a text list:
 
@@ -47,32 +80,27 @@ Once connected, always include `--batch --skip-column-names --force` in subseque
 
 **Gate:** The connection test must return a version string. Do not proceed until this passes.
 
-## Phase 1: Choose a path
+## Phase 2: Execute selected paths
 
-Once connected, use the `AskUserQuestion` tool to ask what the user wants to do — never print the options as a text list:
+Read `references/mariadb-audit-template.md` before executing any path. It defines the structure and quality bar for findings — use it to guide presentation. The template is a floor, not a ceiling: follow its section structure but add findings beyond it when the data warrants.
 
-1. **Server overview** — fetch server state, storage, connections, buffer pool, and replication status; flag anything notable
-2. **Query optimization** — analyze slow queries, missing indexes, and execution plans
-3. **MariaDB feature suggestions** — inspect your schemas and identify concrete improvements using MariaDB-specific capabilities
-4. **Security audit** — review users, grants, privileges, SSL status, and authentication configuration
-
-Wait for the user to choose, then proceed to Phase 2.
-
-## Phase 2: Execute chosen path
+Run each selected path sequentially. Between paths, print a short progress update (e.g. "Server overview complete. Running security audit..."). Do not present menus between paths.
 
 Every path follows the same three-step structure:
 
 1. **Collect** — run diagnostic queries against the live server to gather evidence
-2. **Present** — summarise what was found clearly and concisely; no raw query dumps
-3. **Recommend** — make concrete, actionable recommendations based only on what was observed; cross-reference the companion skills loaded in the Preamble to ensure recommendations are MariaDB-specific
+2. **Analyze** — interpret results, identify issues, and determine severity
+3. **Summarize** — present key findings on screen concisely; save detailed data for the report
 
-### Path 1 — Server overview
+Cross-reference the companion skills loaded in the Preamble to ensure recommendations are MariaDB-specific.
+
+### Path: Server overview
 
 Read `references/server-overview.md` for the diagnostic queries. Run the OS-level commands first (one Bash call), then all SQL queries in a **single** `mariadb --batch --skip-column-names --force` heredoc invocation.
 
 **Important:** `Uptime`, `Threads_connected`, `Questions`, etc. are **status variables** — only accessible via `information_schema.GLOBAL_STATUS`, not `@@global.*`.
 
-Use the MariaDB version returned by the first query to note version-specific behavior in the summary.
+Use the MariaDB version returned by the first query to note version-specific behavior.
 
 **Gate:** At least the server identity and database list queries must return data. Report any queries that failed.
 
@@ -82,54 +110,51 @@ Present a structured summary covering:
 2. **Databases** — list with table counts and sizes
 3. **Storage engines** — engines in use, table counts, data volume per engine
 4. **Connections** — current vs max, peak usage, utilization percentage
-5. **InnoDB buffer pool** — size and hit ratio (read_requests vs reads)
+5. **InnoDB** — buffer pool size/hit ratio, durability settings, checkpoint health
 6. **Replication** — replica status and lag, or "not a replica"
-7. **Health flags** — high aborted connections, buffer pool hit ratio below 99%, slow queries relative to total, connection utilization above 80%
+7. **Health flags** — high aborted connections, buffer pool hit ratio below 99%, slow queries relative to total, connection utilization above 80%, temp disk ratio, full joins without indexes
 
 Scale verbosity to the findings: a healthy server with no issues deserves a compact summary. Expand on areas that need attention.
 
-Present the what-next menu (see below).
-
 ---
 
-### Path 2 — Query optimization
+### Path: Query optimization
 
 Read `references/query-optimization.md` for the instructions and queries for this path.
 
-After completing, present the what-next menu.
-
 ---
 
-### Path 3 — MariaDB feature suggestions
+### Path: MariaDB feature suggestions
 
 Read `references/feature-suggestions.md` for the instructions and queries for this path.
 
-After completing, present the what-next menu.
-
 ---
 
-### Path 4 — Security audit
+### Path: Security audit
 
 Read `references/security-audit.md` for the instructions and queries for this path.
 
-After completing, present the what-next menu.
-
 ---
 
-## What-next menu
+## Phase 3: Generate report
 
-After completing any path, always use the `AskUserQuestion` tool to present this menu — never print it as a text list. This ensures the user gets a proper interactive menu to click rather than a numbered list to read.
+After all selected paths have completed:
 
-Track which paths have already been run in this session and append " (already done — redo?)" to their label.
+1. Get the timestamp via `date +%Y-%m-%d_%H-%M-%S` (Bash)
+2. Read `references/mariadb-audit-template.md`
+3. Write the report to `mariadb-audit_{timestamp}.md` in the current directory using the Write tool
+4. Fill in each template section with observed data from the paths that were run
+5. **Keep all template section headers** even for paths that were not run — write "Analysis for this section was not collected." under headers for unselected paths
+6. Add any additional findings discovered beyond the template's structure
+7. Always include the **Executive Summary** (section 1) and **Recommendations Summary** (section 10) to tie everything together — these are generated regardless of which paths were selected
+8. Confirm the filename to the user
 
-Options to include in the `AskUserQuestion` call:
+## Phase 4: What next
 
-1. **Dig deeper** — explore a specific finding, question, or area mentioned in the analysis just completed
-2. **Server overview** — append " (already done — redo?)" if already run
-3. **Query optimization** — append " (already done — redo?)" if already run
-4. **MariaDB feature suggestions** — append " (already done — redo?)" if already run
-5. **Security audit** — append " (already done — redo?)" if already run
-6. **Nothing — I'm done**
-7. **Save findings to markdown file mariadb-audit** — write all findings gathered in this session to `mariadb-audit.md` in the current directory (overwrite if it exists). Get the timestamp via `date +%y%m%d-%H%M%S` (Bash), write the file using the Write tool with a top-level header containing hostname, version, and timestamp, then a section per path that was run. Confirm the filename when done.
+After the report is generated, use the `AskUserQuestion` tool to present follow-up options:
 
-Never drop paths from the list. Execute whichever option the user picks.
+1. **Dig deeper** — explore a specific finding, question, or area from the audit
+2. **Run additional paths** — only show paths that were not selected in Phase 0
+3. **Done** — end the session
+
+If the user chooses to run additional paths, execute them, then regenerate the report with a new timestamp including the new findings alongside the original ones.
