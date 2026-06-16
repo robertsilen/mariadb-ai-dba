@@ -151,11 +151,10 @@ After all selected paths have completed:
 
 ## Phase 4: What next
 
-After the report is generated, use the `AskUserQuestion` tool with **multiSelect: true** to present follow-up options:
+After the report is generated, use the `AskUserQuestion` tool to present follow-up options:
 
-1. **Convert report to PDF** — run `pandoc mariadb-audit_{timestamp}.md -o mariadb-audit_{timestamp}.pdf` (requires `pandoc` on PATH). If pandoc is not installed, tell the user how to install it (`brew install pandoc` / `apt install pandoc`) and retry.
-2. **Convert report to HTML** — run `pandoc mariadb-audit_{timestamp}.md -s --metadata title="MariaDB Audit Report" -o mariadb-audit_{timestamp}.html`
-3. **Dig deeper** — explore a specific finding, question, or area from the audit
-4. **Run additional paths** — only show paths that were not selected in Phase 0
+1. **Dig deeper** — explore a specific finding, question, or area from the audit
+2. **Run additional paths** — only show paths that were not selected in Phase 0
+3. **Done** — end the session
 
 If the user chooses to run additional paths, execute them, then regenerate the report with a new timestamp including the new findings alongside the original ones.
