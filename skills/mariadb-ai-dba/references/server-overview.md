@@ -75,6 +75,53 @@ SHOW ALL SLAVES STATUS\G
 SQL
 ```
 
+## OS-level context
+
+Run these **before** the SQL heredoc in a separate Bash call. They provide system context needed to evaluate whether configuration values (e.g. buffer pool size) are appropriate for the hardware.
+
+The commands differ by platform. Detect the platform and run the appropriate set.
+
+### macOS and Linux
+
+```bash
+OS=$(uname -s)
+echo "os: $OS $(uname -r) $(uname -m)"
+
+if [ "$OS" = "Darwin" ]; then
+    echo "ram_bytes: $(sysctl -n hw.memsize)"
+    echo "cpu_cores: $(sysctl -n hw.ncpu)"
+    echo "cpu_model: $(sysctl -n machdep.cpu.brand_string 2>/dev/null || echo unknown)"
+elif [ "$OS" = "Linux" ]; then
+    echo "ram_bytes: $(awk '/MemTotal/ {print $2 * 1024}' /proc/meminfo)"
+    echo "cpu_cores: $(nproc)"
+    echo "cpu_model: $(awk -F': ' '/model name/ {print $2; exit}' /proc/cpuinfo)"
+fi
+```
+
+### Windows
+
+If `uname` is not available or returns `MINGW`/`MSYS`/`CYGWIN`, use PowerShell instead:
+
+```powershell
+Write-Output "os: Windows $([System.Environment]::OSVersion.Version)"
+Write-Output "ram_bytes: $((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory)"
+Write-Output "cpu_cores: $((Get-CimInstance Win32_Processor).NumberOfLogicalProcessors)"
+Write-Output "cpu_model: $((Get-CimInstance Win32_Processor).Name)"
+```
+
+Run this via: `powershell -NoProfile -Command "..."` if the Bash tool is available, or directly if running in a PowerShell environment.
+
+### Disk space
+
+After the SQL queries have run and you know `@@datadir`, check disk space for the datadir:
+
+- **macOS / Linux:** `df -h /path/to/datadir`
+- **Windows:** `powershell -NoProfile -Command "Get-PSDrive -Name (Split-Path -Qualifier 'C:\path\to\datadir').TrimEnd(':')"`
+
+Substitute the actual `@@datadir` value returned by the SQL queries.
+
+Use these values in the summary to contextualize recommendations — e.g. "buffer pool is 128 MB on a machine with 8 GB RAM; could safely increase to 2-4 GB" or "datadir disk is 87% full."
+
 ## Interpreting the results
 
 - **InnoDB buffer pool hit ratio:** `(read_requests - reads) / read_requests * 100`. Healthy is above 99%.

@@ -18,15 +18,27 @@ All queries are read-only. The skill never modifies data, schema, or configurati
 
 ## How to Use
 
-### Claude Code (CLI or Desktop App)
+### Quick start (run from the repo)
 
-Claude Code supports skills natively. Symlink the skill into your skills directory:
+Clone the repo and run directly — no installation needed:
+
+```bash
+git clone https://github.com/mariadb/mariadb-ai-dba.git
+cd mariadb-ai-dba
+claude "dba"
+```
+
+That's it. Claude reads the skill from the repo and walks you through connecting.
+
+### Install as a skill (optional)
+
+To make the skill available from any directory, symlink it into your skills directory:
 
 ```bash
 ln -s /path/to/mariadb-ai-dba/skills/mariadb-ai-dba ~/.claude/skills/mariadb-ai-dba
 ```
 
-Also install the companion skills from [github.com/mariadb/skills](https://github.com/mariadb/skills):
+Also install the companion skills from [github.com/mariadb/skills](https://github.com/mariadb/skills) for deeper MariaDB-specific analysis:
 
 ```bash
 ln -s /path/to/mariadb-skills/mariadb-features ~/.claude/skills/mariadb-features
@@ -34,12 +46,10 @@ ln -s /path/to/mariadb-skills/mariadb-query-optimization ~/.claude/skills/mariad
 ln -s /path/to/mariadb-skills/mysql-to-mariadb ~/.claude/skills/mysql-to-mariadb
 ```
 
-Then start a conversation and ask something like:
+Then from any directory:
 - "Analyze my MariaDB server"
 - "Run a database health check"
 - "Audit my MariaDB security"
-
-Claude will automatically activate the skill and walk you through connecting.
 
 ### Claude Desktop (claude.ai app)
 

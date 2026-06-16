@@ -67,7 +67,7 @@ Every path follows the same three-step structure:
 
 ### Path 1 — Server overview
 
-Read `references/server-overview.md` for the diagnostic queries. Run them all in a **single** `mariadb --batch --skip-column-names --force` heredoc invocation.
+Read `references/server-overview.md` for the diagnostic queries. Run the OS-level commands first (one Bash call), then all SQL queries in a **single** `mariadb --batch --skip-column-names --force` heredoc invocation.
 
 **Important:** `Uptime`, `Threads_connected`, `Questions`, etc. are **status variables** — only accessible via `information_schema.GLOBAL_STATUS`, not `@@global.*`.
 
