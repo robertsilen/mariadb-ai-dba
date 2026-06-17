@@ -19,7 +19,17 @@ These override everything else in this skill.
 - **Plain Language.** Explain every abbreviation, acronym, or technical shorthand on first use — both in conversation output and in written report files — by appending the expansion in parentheses. Examples: InnoDB (MariaDB's default storage engine), BP (buffer pool), MB (megabytes), GB (gigabytes), SSL (Secure Sockets Layer), GTID (Global Transaction ID), DML (Data Manipulation Language), DDL (Data Definition Language), QPS (queries per second), I/O (input/output). Apply this to metric names, status variable names surfaced to the user, and any other jargon a non-DBA reader might not know.
 - **Fail Loud.** If a connection fails, a query errors, or a metric is unavailable, report the exact error. Do not skip silently or guess values.
 
-## Preamble: Load companion skills
+## Progress messages
+
+Print a short progress message when entering each phase so the user can follow along. Use the phase number and name:
+
+- "**Phase 0: Preparations**" (companion skills, then audit scope menu)
+- "**Phase 1: Connection**"
+- "**Phase 2: Data collection** — Running server overview..." / "Server overview complete. Running security audit..." etc.
+- "**Phase 3: Report generation**"
+- "**Phase 4: What next**"
+
+## Phase 0: Preparations
 
 Before doing anything else, attempt to invoke these skills to load their knowledge into context. They inform your analysis throughout all phases:
 
@@ -45,9 +55,9 @@ ln -s /tmp/mariadb-skills/skills/{skill-name} ~/.claude/skills/{skill-name}
 ```
 Then invoke each skill. If the clone or symlink fails, report the error and continue without.
 
-## Phase 0: Choose audit scope
+### Choose audit scope
 
-Use the `AskUserQuestion` tool with **multiSelect: true**. If the user selects nothing or selects "Other" with no text, run all four paths.
+After companion skills are loaded, use the `AskUserQuestion` tool with **multiSelect: true**. If the user selects nothing or selects "Other" with no text, run all four paths.
 
 Header: "Audit scope"
 
@@ -84,7 +94,7 @@ Once connected, always include `--batch --skip-column-names --force` in subseque
 
 Read `references/mariadb-audit-template.md` before executing any path. It defines the structure and quality bar for findings — use it to guide presentation. The template is a floor, not a ceiling: follow its section structure but add findings beyond it when the data warrants.
 
-Run each selected path sequentially. Between paths, print a short progress update (e.g. "Server overview complete. Running security audit..."). Do not present menus between paths.
+Run each selected path sequentially. Between paths, print a short progress update (e.g. "Server overview complete. Running security audit...") as described in the Progress messages section. Do not present menus between paths.
 
 Every path follows the same three-step structure:
 
@@ -144,17 +154,19 @@ After all selected paths have completed:
 2. Read `references/mariadb-audit-template.md`
 3. Write the report to `mariadb-audit_{timestamp}.md` in the current directory using the Write tool
 4. Fill in each template section with observed data from the paths that were run
-5. **Keep all template section headers** even for paths that were not run — write "Analysis for this section was not collected." under headers for unselected paths
+5. **Keep all template section headers** even for paths that were not run. Every section header in the template that has an explanation paragraph below it must have that same explanation reproduced verbatim in the report — do not paraphrase, shorten, or replace it with your own text. After the explanation, write the section's findings (or "Analysis for this section was not collected." for unselected paths).
 6. Add any additional findings discovered beyond the template's structure
 7. Always include the **Executive Summary** (section 1) and **Recommendations Summary** (section 10) to tie everything together — these are generated regardless of which paths were selected
-8. Confirm the filename to the user
+8. Read `references/mariadb-audit-template.html` for the HTML skeleton with all styling. Write `mariadb-audit_{timestamp}.html` by replacing the body comment with the report content as HTML. The HTML must contain the same content as the .md — including every section explanation paragraph under each header. Use the CSS classes defined in the template (`.badge .critical/.high/.medium/.low`, `.finding`, `.summary-grid`, `.summary-card`, `.note`, `.section-intro`, `pre`, `code`). Do not regenerate or modify the `<style>` block.
+9. Open the HTML file in the default browser: `open mariadb-audit_{timestamp}.html` (macOS), `xdg-open` (Linux), or `start` (Windows)
+10. Confirm both filenames (.md and .html) to the user
 
 ## Phase 4: What next
 
 After the report is generated, use the `AskUserQuestion` tool to present follow-up options:
 
 1. **Dig deeper** — explore a specific finding, question, or area from the audit
-2. **Run additional paths** — only show paths that were not selected in Phase 0
+2. **Run additional paths** — only show paths that were not selected in the audit scope menu
 3. **Done** — end the session
 
 If the user chooses to run additional paths, execute them, then regenerate the report with a new timestamp including the new findings alongside the original ones.

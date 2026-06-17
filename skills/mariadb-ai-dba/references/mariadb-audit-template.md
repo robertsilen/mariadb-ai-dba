@@ -15,7 +15,7 @@ This file defines the structure and quality bar for the `mariadb-audit.md` outpu
 
 **Server:** {version} on {os} ({cpu_model}, {ram_total})
 **Generated:** {YYMMDD-HHMMSS timestamp from `date +%y%m%d-%H%M%S`}
-**Auditor:** Claude Code with MariaDB AI DBA skill
+**Auditor:** Claude Code with [MariaDB AI DBA](https://github.com/robertsilen/mariadb-ai-dba) skill
 
 ---
 
@@ -53,6 +53,8 @@ One or two paragraphs in plain language:
 
 ## 2. Server Identity & Environment
 
+The foundation for every recommendation in this report. Version, hardware, and uptime determine what configuration values are appropriate and whether the server is end-of-life or due for an upgrade.
+
 | Item | Value |
 |------|-------|
 | Version | {version} — note if rolling release (12.x) vs LTS (11.4, 11.8) |
@@ -73,6 +75,8 @@ One or two paragraphs in plain language:
 ---
 
 ## 3. InnoDB (MariaDB's default storage engine) Configuration & Health
+
+InnoDB manages how data is stored, cached, and written to disk. Misconfiguration here is the most common cause of poor performance and the most common source of data loss risk after a crash.
 
 ### Buffer Pool (BP)
 
@@ -106,6 +110,8 @@ One or two paragraphs in plain language:
 
 ## 4. Connections & Threading
 
+Each client connection consumes memory and a thread. Running out of connections causes application errors; misconfigured threading wastes resources or adds latency.
+
 | Metric | Value | Assessment |
 |--------|-------|------------|
 | Current connections | {n} | |
@@ -119,6 +125,8 @@ One or two paragraphs in plain language:
 ---
 
 ## 5. Query Performance Indicators
+
+Server-wide counters that reveal whether queries are running efficiently. High scan rates, excessive temp tables on disk, or joins without indexes point to specific optimization opportunities.
 
 ### Global Counters
 
@@ -172,6 +180,18 @@ Shows which tables generate the most I/O wait time. High-wait tables are prime c
 
 ## 6. Schema Analysis
 
+The physical structure of tables and indexes has a direct impact on query speed, storage efficiency, and replication reliability. Schema problems tend to get worse over time as data grows.
+
+### Databases
+
+| Database | Tables | Size (MB) | Notes |
+|----------|--------|-----------|-------|
+
+Include storage engines in use across all user databases (excluding system schemas):
+
+| Engine | Tables | Size (MB) |
+|--------|--------|-----------|
+
 ### Tables Without Primary Key
 
 List any tables lacking a primary key. Explain: InnoDB clusters data on the primary key. Without one, InnoDB uses an invisible 6-byte row ID, which hurts performance and can break row-based replication.
@@ -211,6 +231,8 @@ Tables with >10,000 rows that have only a primary key. These likely need seconda
 
 ## 7. Security
 
+Who can connect, what they can do, and whether the connection is encrypted. A single misconfigured account can expose the entire database — security issues are often invisible until exploited.
+
 ### User Accounts
 
 | Account | Auth Plugin | Host | SSL Required | Flags |
@@ -248,6 +270,8 @@ For each finding, include:
 
 ## 8. MariaDB Feature Opportunities
 
+MariaDB includes capabilities that many applications implement in application code or miss entirely. Using built-in features reduces complexity, improves performance, and strengthens data integrity at the database level.
+
 For each suggestion:
 
 ### {N}. {Feature Name} for `{schema.table}` ({SEVERITY})
@@ -278,6 +302,8 @@ For each suggestion:
 
 ## 9. Replication
 
+Replication keeps copies of the database in sync for high availability, read scaling, or disaster recovery. Lag, errors, or misconfiguration here can cause stale reads or data loss during failover.
+
 **If the server is configured as a replica:**
 
 | Metric | Value |
@@ -296,6 +322,8 @@ Include any replication errors or warnings.
 
 ## 10. Recommendations Summary
 
+Every finding from the report in one place, sorted by severity. Use this as a prioritized action list — start from the top.
+
 All findings from all sections, sorted by severity:
 
 | # | Severity | Section | Finding | Fix |
@@ -307,6 +335,8 @@ All findings from all sections, sorted by severity:
 ---
 
 ## Appendix: Raw Configuration
+
+Reference values for DBAs who want to verify findings or spot issues not covered by the automated checks.
 
 Selected `@@global.*` values for expert review. Include at minimum:
 
@@ -320,5 +350,7 @@ tmp_table_size, max_heap_table_size,
 sort_buffer_size, join_buffer_size,
 read_buffer_size, read_rnd_buffer_size,
 skip_name_resolve, local_infile,
-have_ssl, require_secure_transport
+have_ssl, require_secure_transport,
+performance_schema,
+slow_query_log, long_query_time, log_queries_not_using_indexes
 ```

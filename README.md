@@ -13,7 +13,7 @@ When activated, the AI DBA will:
    - **Security audit** — users, grants, privileges, SSL status, and authentication configuration
 2. Ask for connection details
 3. Run all selected paths and collect diagnostic data
-4. Generate a timestamped audit report (`mariadb-audit_{timestamp}.md`) with findings, severity ratings, and actionable recommendations
+4. Generate a timestamped audit report (`mariadb-audit_{timestamp}.md` + `.html`) with findings, severity ratings, and actionable recommendations — the HTML version opens in a browser for easy copy-paste into email or Google Docs
 
 All queries are read-only. The skill never modifies data, schema, or configuration. Use a [read-only database user](#security) to be sure.
 
