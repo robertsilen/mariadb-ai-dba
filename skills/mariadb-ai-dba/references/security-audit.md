@@ -111,6 +111,8 @@ SQL
 
 ### Severity mapping
 
+Use these severity levels in the Security Findings table in the report:
+
 - **CRITICAL:** Anonymous accounts (user = '') — anyone can connect without credentials
 - **HIGH:** Non-local root accounts, wildcard host accounts (host = '%'), empty passwords on non-socket-auth accounts
 - **HIGH:** Non-root accounts with ALL PRIVILEGES at global level
@@ -118,6 +120,10 @@ SQL
 - **MEDIUM:** SSL/TLS disabled (have_ssl = DISABLED), require_secure_transport = OFF
 - **LOW:** local_infile = ON, test database present, password validation plugin not installed
 - **LOW:** PUBLIC role grants on test or user databases, skip_name_resolve = OFF
+
+### Output format
+
+Present findings as a compact table: `| # | Severity | Finding |`. If any CRITICAL or HIGH findings exist, add one short paragraph after the table explaining the most urgent items and how to fix them (e.g. "Drop the anonymous accounts with `DROP USER ''@'localhost'`"). Keep it concise — a few sentences total, not a block per finding.
 
 ### Notes
 

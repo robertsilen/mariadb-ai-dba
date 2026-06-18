@@ -79,6 +79,8 @@ SQL
 
 ### Interpreting Phase A
 
+> **Internal AI guidance.** These thresholds help you understand what you are collecting and present it intelligibly. Do not include these assessments or recommendations in the report output. Present the values factually with uptime context and per-second rates.
+
 - **Select_full_join > 0:** Joins are happening without indexes on the joined columns. High priority to investigate.
 - **Sort_merge_passes > 0:** Sorts are exceeding sort_buffer_size and spilling to disk. May need larger sort_buffer_size or query rewriting.
 - **Temp disk ratio:** `created_tmp_disk_tables / created_tmp_tables * 100`. Above 25% means many temp tables go to disk — increase tmp_table_size/max_heap_table_size, or check for TEXT/BLOB columns in GROUP BY (these always force disk temp tables).
@@ -234,6 +236,8 @@ SQL
 
 ### Interpreting Phase B
 
+> **Internal AI guidance.** These thresholds help you understand what you are collecting and present it intelligibly. Do not include these assessments or recommendations in the report output. Present the schema data factually.
+
 - **No primary key:** InnoDB uses a hidden 6-byte row ID when no PK exists. This hurts range scans, causes fragmentation, and can break row-based replication. Always recommend adding a PK.
 - **Non-optimal PK:** TEXT/BLOB PKs are stored off-page, making every secondary index lookup expensive. Large VARCHAR PKs bloat every secondary index. Recommend switching to INT/BIGINT AUTO_INCREMENT.
 - **Auto-increment fill > 75%:** The table will fail to insert once the maximum is reached. For INT columns near the limit, ALTER to BIGINT before overflow.
@@ -326,6 +330,8 @@ SQL
 
 ### Interpreting Phase D
 
+> **Internal AI guidance.** These thresholds help you understand what you are collecting and present it intelligibly. Do not include these assessments or recommendations in the report output. Present the performance schema data factually.
+
 - **Timer values** are in picoseconds (10⁻¹² seconds). Divide by 1,000,000,000,000 for seconds, by 1,000,000,000 for milliseconds. The queries above already do this conversion.
 - **Statement digests** normalize SQL by replacing literal values with `?` — the text shown is a query pattern, not a specific query instance. Multiple queries with different WHERE values but the same structure share one digest row.
 - **`DIGEST_TEXT` truncation:** Queries longer than `performance_schema_max_digest_length` (default 1024 bytes) are truncated. The output further truncates to 200 chars for readability — mention this when presenting.
@@ -338,41 +344,10 @@ SQL
 
 ### If Performance Schema is OFF
 
-Include this recommendation in findings (MEDIUM severity):
-
-> **Performance Schema is not enabled.** Enable it to unlock statement-level profiling — the most powerful tool for identifying slow queries and optimization targets.
->
-> **What you gain:**
-> - **Statement digest analysis** — see exactly which query patterns consume the most time, examine the most rows, and create temp tables on disk
-> - **Index usage tracking** — identify truly unused indexes (safe to drop) vs heavily used ones
-> - **Table I/O profiling** — which tables are the I/O hotspots
->
-> **Overhead:** Modest memory increase and approximately 5% CPU in typical workloads. The server allocates memory for instrumentation structures at startup.
->
-> **How to enable:**
-> ```ini
-> [mysqld]
-> performance_schema = ON
-> ```
-> Restart the server. Let data accumulate for at least 24 hours (ideally a full business cycle) before running the audit again for meaningful results.
+Note in the report: "Performance Schema is not enabled. Enabling it (by adding `performance_schema = ON` to `my.cnf` and restarting) unlocks statement-level profiling — including which query patterns consume the most time, which indexes are actually used, and which tables generate the most I/O. Overhead is modest (~5% CPU, additional memory for instrumentation)."
 
 ---
 
-## Phase C: Interactive analysis
+## Phase C: Interactive analysis (deferred)
 
-After presenting Phase A, B, and D (if available) findings, offer the user these options via `AskUserQuestion`:
-
-1. **Analyze a specific query** — ask for the SQL, then run `EXPLAIN FORMAT=JSON` against it and interpret the execution plan
-2. **Inspect a specific table** — run `SHOW CREATE TABLE` and `SHOW INDEX FROM` for the table, analyze index coverage
-3. **Done with query optimization** — return to the what-next menu
-
-For each query the user provides:
-- Run `EXPLAIN FORMAT=JSON {query}` (read-only — EXPLAIN does not execute the query)
-- Look for: `type: ALL` (full scan), `possible_keys: null`, `rows` vs actual result set, `Using filesort`, `Using temporary`, `Using where` without an index
-- Suggest specific indexes based on the WHERE, JOIN, ORDER BY, and GROUP BY clauses
-- If the query touches a table flagged in Phase B (no PK, no secondary indexes), connect the dots
-
-For table inspection:
-- Show the CREATE TABLE output and current indexes
-- Cross-reference with Phase B findings
-- Suggest specific indexes for common query patterns (look at column names for clues: status, created_at, user_id, email, etc.)
+Interactive query analysis (EXPLAIN plans, table inspection) is deferred from the inventory workflow. It requires judgment and context that belong in a future analysis step once trending data is available. The "Dig deeper" option in Phase 4 (What next) covers ad-hoc query investigation when the user requests it.

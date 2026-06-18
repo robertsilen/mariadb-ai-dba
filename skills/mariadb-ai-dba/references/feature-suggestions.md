@@ -1,6 +1,6 @@
-# MariaDB Feature Suggestions
+# MariaDB Features
 
-This path collects schema metadata, then uses AI pattern matching to identify where MariaDB-specific features could improve the database.
+This path collects schema metadata, then identifies which MariaDB-specific features are currently in use and which are available but not yet used.
 
 ## Data collection
 
@@ -89,11 +89,11 @@ ORDER BY TABLE_SCHEMA, TABLE_NAME;
 SQL
 ```
 
-## AI analysis: feature pattern matching
+## AI analysis: feature inventory
 
-After collecting the metadata above, analyze it for opportunities to use MariaDB-specific features. This is where the AI reasons over the schema — no additional queries needed.
+After collecting the metadata above, identify which MariaDB-specific features are in use and which are available but not used. This is where the AI reasons over the schema — no additional queries needed.
 
-For each pattern found, present the MariaDB feature, which table/column it applies to, why it's a good fit, and provide ready-to-run SQL.
+Present two lists: (1) features detected in the current schema, and (2) features available in this MariaDB version where schema patterns suggest potential applicability. Do not provide ready-to-run SQL or recommend specific changes — just note what exists and what could apply.
 
 ### 1. System-versioned tables
 

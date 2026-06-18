@@ -2,24 +2,24 @@
 
 # MariaDB AI DBA
 
-An AI-powered database administrator skill for Claude Code. Connects to a MariaDB server and produces a comprehensive audit report covering server health, query optimization, security, and MariaDB-specific feature opportunities.
+An AI-powered database administrator skill for Claude Code. Connects to a MariaDB server and produces a factual server inventory covering configuration, schema, performance counters, security, and MariaDB-specific features.
 
 ## What It Does
 
 When activated, the AI DBA will:
 
 1. Ask which analysis paths to include (multi-select, all selected by default):
-   - **Server overview** — server state, InnoDB health, connections, buffer pool, replication, and performance counters
-   - **Query optimization** — slow query config, missing indexes, schema analysis, duplicate indexes, and Performance Schema statement digests
-   - **MariaDB feature suggestions** — inspects schemas and identifies improvements using MariaDB-native capabilities
+   - **Server overview** — server state, InnoDB configuration, connections, buffer pool, replication, and performance counters
+   - **Query optimization** — slow query config, schema structure, indexes, and Performance Schema statement digests
+   - **MariaDB features** — which MariaDB-specific features are in use and which are available
    - **Security audit** — users, grants, privileges, SSL status, and authentication configuration
 2. Ask for connection details
 3. Run all selected paths and collect diagnostic data
-4. Generate a timestamped audit report (`mariadb-audit_{timestamp}.md` + `.html`) with findings, severity ratings, and actionable recommendations — the HTML version opens in a browser for easy copy-paste into email or Google Docs
+4. Generate a timestamped server inventory (`mariadb-audit_{timestamp}.md` + `.html`) with a factual snapshot of the server's configuration, schema, accounts, and performance counters — the HTML version opens in a browser for easy copy-paste into email or Google Docs. Security findings include severity ratings and fix recommendations.
 
 All queries are read-only. The skill never modifies data, schema, or configuration. Use a [read-only database user](#security) to be sure.
 
-Companion skills from [github.com/MariaDB/skills](https://github.com/MariaDB/skills) are loaded automatically for deeper MariaDB-specific analysis. If not installed, the skill offers to fetch them from GitHub.
+Companion skills from [github.com/MariaDB/skills](https://github.com/MariaDB/skills) are loaded automatically for deeper MariaDB-specific context. If not installed, the skill offers to fetch them from GitHub.
 
 ## How to Use
 
@@ -78,6 +78,18 @@ Pass it to the skill when prompted: choose **Defaults file** and provide the pat
 
 ## Requirements
 
-- `mariadb` command-line client installed and on your PATH
+- Python 3 with the `mariadb` module (`pip install mariadb`) — requires [MariaDB Connector/C](https://mariadb.com/docs/server/connect/programming-languages/python/install/) at OS level
 - Network access to the target MariaDB server
 - A database user with at least read privileges (see [Security](#security) above for the recommended setup)
+
+Falls back to the `mariadb` CLI client if Python or the module is unavailable.
+
+### Optional: continuous monitoring
+
+For time-series trending with graphs, run the collector as a daemon before your next audit:
+
+```bash
+python3 skills/mariadb-ai-dba/collect.py --daemon --interval 1 --socket /tmp/mysql.sock --snapshots-dir ./snapshots
+```
+
+This samples GLOBAL_STATUS every second. The next audit run will include time-series data and trends.

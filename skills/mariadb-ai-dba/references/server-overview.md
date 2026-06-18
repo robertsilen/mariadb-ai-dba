@@ -153,9 +153,11 @@ After the SQL queries have run and you know `@@datadir`, check disk space for th
 
 Substitute the actual `@@datadir` value returned by the SQL queries.
 
-Use these values in the summary to contextualize recommendations — e.g. "buffer pool is 128 MB on a machine with 8 GB RAM; could safely increase to 2-4 GB" or "datadir disk is 87% full."
+Use these values in the summary to provide context — e.g. "buffer pool is 128 MB on a machine with 8 GB RAM (1.6% of RAM)" or "datadir disk is 87% full with 12 GB free."
 
 ## Interpreting the results
+
+> **Internal AI guidance.** These thresholds help you understand what you are collecting and present it intelligibly. Do not include these assessments or recommendations in the report output. Present the values factually with their context (e.g. "buffer pool is 128 MB, which is 1.6% of the server's 8 GB RAM").
 
 - **InnoDB buffer pool hit ratio:** `(read_requests - reads) / read_requests * 100`. Healthy is above 99%.
 - **Buffer pool pages:** Free < 5% of total = pool is undersized. Free > 50% = pool is oversized (wasting RAM).
