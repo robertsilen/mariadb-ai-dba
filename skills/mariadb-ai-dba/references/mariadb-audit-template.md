@@ -11,10 +11,12 @@ This file defines the structure and quality bar for the `mariadb-audit.md` outpu
 
 ---
 
+<img src="https://raw.githubusercontent.com/robertsilen/mariadb-ai-dba/main/MariaDB_Foundation_logo.png" alt="MariaDB Foundation">
+
 # MariaDB Audit Report — {hostname}
 
-**Server:** {version} on {os} ({cpu_model}, {ram_total})
-**Generated:** {YYMMDD-HHMMSS timestamp from `date +%y%m%d-%H%M%S`}
+**Server:** {version} on {os} ({cpu_model}, {ram_total})<br/>
+**Generated:** {YYYY-MM-DD} at {HH:MM} {timezone, e.g. CET}<br/>
 **Auditor:** Claude Code with [MariaDB AI DBA](https://github.com/robertsilen/mariadb-ai-dba) skill
 
 ---
@@ -93,18 +95,18 @@ InnoDB manages how data is stored, cached, and written to disk. Misconfiguration
 
 | Setting | Value | Assessment |
 |---------|-------|------------|
-| innodb_flush_log_at_trx_commit | {0/1/2} | 1 = full ACID (safe), 2 = flush once/sec (fast), 0 = risky |
-| sync_binlog | {0/1/N} | 1 = safest, 0 = fast but data-loss risk on crash |
-| innodb_flush_method | {value} | O_DIRECT recommended on Linux to avoid double-buffering |
-| innodb_doublewrite | {ON/OFF} | Should be ON unless hardware has battery-backed write cache |
-| innodb_log_file_size | {size} | Should hold approximately 1 hour of peak write traffic |
-| innodb_log_buffer_size | {size} | 16-64 MB is typical |
+| `innodb_flush_log_at_trx_commit` | {0/1/2} | 1 = full ACID (safe), 2 = flush once/sec (fast), 0 = risky |
+| `sync_binlog` | {0/1/N} | 1 = safest, 0 = fast but data-loss risk on crash |
+| `innodb_flush_method` | {value} | O_DIRECT recommended on Linux to avoid double-buffering |
+| `innodb_doublewrite` | {ON/OFF} | Should be ON unless hardware has battery-backed write cache |
+| `innodb_log_file_size` | {size} | Should hold approximately 1 hour of peak write traffic |
+| `innodb_log_buffer_size` | {size} | 16-64 MB is typical |
 
 ### Checkpoint Health
 
 | Metric | Value | Assessment |
 |--------|-------|------------|
-| Checkpoint age vs max age | | Age > 75% of max = redo log files too small, increase innodb_log_file_size |
+| Checkpoint age vs max age | | Age > 75% of max = redo log files too small, increase `innodb_log_file_size` |
 
 ---
 
@@ -115,12 +117,12 @@ Each client connection consumes memory and a thread. Running out of connections 
 | Metric | Value | Assessment |
 |--------|-------|------------|
 | Current connections | {n} | |
-| Peak connections (Max_used_connections) | {n} | |
-| max_connections | {n} | Utilization = peak / max x 100; > 80% = warning |
+| Peak connections (`Max_used_connections`) | {n} | |
+| `max_connections` | {n} | Utilization = peak / max x 100; > 80% = warning |
 | Aborted connects | {n} | High count relative to uptime = authentication failures or network issues |
 | Aborted clients | {n} | High count = clients not closing connections properly |
-| thread_cache_size | {n} | Should cover typical connection churn |
-| skip_name_resolve | {ON/OFF} | Should be ON for performance (avoids DNS lookups on connect) |
+| `thread_cache_size` | {n} | Should cover typical connection churn |
+| `skip_name_resolve` | {ON/OFF} | Should be ON for performance (avoids DNS lookups on connect) |
 
 ---
 
@@ -134,26 +136,26 @@ Server-wide counters that reveal whether queries are running efficiently. High s
 |--------|-------|-------------|------------|
 | Questions (total queries) | {n} | {rate} | Baseline for other ratios |
 | Slow queries | {n} | {rate} | Any non-trivial ratio to Questions = investigate |
-| Select_scan (full table scans) | {n} | {rate} | High rate = missing indexes |
-| Select_full_join (joins without indexes) | {n} | {rate} | Should be 0 |
-| Sort_merge_passes | {n} | {rate} | > 0 suggests sort_buffer_size may be too small |
-| Created_tmp_tables | {n} | {rate} | |
-| Created_tmp_disk_tables | {n} | {rate} | Disk / total > 25% = raise tmp_table_size or max_heap_table_size |
-| Handler_read_rnd_next (full-scan row reads) | {n} | {rate} | High value confirms full table scans |
+| `Select_scan` (full table scans) | {n} | {rate} | High rate = missing indexes |
+| `Select_full_join` (joins without indexes) | {n} | {rate} | Should be 0 |
+| `Sort_merge_passes` | {n} | {rate} | > 0 suggests `sort_buffer_size` may be too small |
+| `Created_tmp_tables` | {n} | {rate} | |
+| `Created_tmp_disk_tables` | {n} | {rate} | Disk / total > 25% = raise `tmp_table_size` or `max_heap_table_size` |
+| `Handler_read_rnd_next` (full-scan row reads) | {n} | {rate} | High value confirms full table scans |
 
 ### Slow Query Log Configuration
 
 | Setting | Value | Recommendation |
 |---------|-------|----------------|
-| slow_query_log | {ON/OFF} | Should be ON |
-| long_query_time | {seconds} | 1-2 seconds for most workloads |
-| log_queries_not_using_indexes | {ON/OFF} | ON for development and staging |
+| `slow_query_log` | {ON/OFF} | Should be ON |
+| `long_query_time` | {seconds} | 1-2 seconds for most workloads |
+| `log_queries_not_using_indexes` | {ON/OFF} | ON for development and staging |
 
 ### Statement Digest Analysis (requires Performance Schema)
 
 If Performance Schema is enabled, this section shows the actual queries consuming the most server resources. Data is cumulative since last server restart. If uptime is less than 24 hours, note that results may not represent the full workload cycle.
 
-If Performance Schema is not enabled: "Performance Schema is not enabled. Enable it by adding `performance_schema=ON` to `my.cnf` and restarting the server. This unlocks statement-level profiling — the most powerful tool for identifying optimization targets. Let data accumulate for at least 24 hours before re-running the audit. Overhead is modest (~5% CPU, additional memory for instrumentation)."
+If Performance Schema is not enabled: "Performance Schema is not enabled. Enable it by adding `performance_schema = ON` to `my.cnf` and restarting the server. This unlocks statement-level profiling — the most powerful tool for identifying optimization targets. Let data accumulate for at least 24 hours before re-running the audit. Overhead is modest (~5% CPU, additional memory for instrumentation)."
 
 #### Top Queries by Total Execution Time
 
@@ -261,8 +263,8 @@ For each finding, include:
 - Non-root users with ALL PRIVILEGES — MEDIUM
 - Non-root users with admin privileges (SUPER, SHUTDOWN, RELOAD, PROCESS, FILE) — MEDIUM
 - SSL/TLS (Secure Sockets Layer / Transport Layer Security) disabled — MEDIUM
-- require_secure_transport OFF — MEDIUM
-- local_infile ON — LOW
+- `require_secure_transport` OFF — MEDIUM
+- `local_infile` ON — LOW
 - Test database present — LOW
 - Password validation plugin not installed — LOW
 
@@ -334,23 +336,34 @@ All findings from all sections, sorted by severity:
 
 ---
 
-## Appendix: Raw Configuration
+## Appendix A: Raw Configuration
 
 Reference values for DBAs who want to verify findings or spot issues not covered by the automated checks.
 
 Selected `@@global.*` values for expert review. Include at minimum:
 
-```
-innodb_buffer_pool_size, innodb_buffer_pool_instances,
-innodb_log_file_size, innodb_log_buffer_size,
-innodb_flush_log_at_trx_commit, innodb_flush_method,
-innodb_doublewrite, sync_binlog,
-max_connections, thread_cache_size, table_open_cache,
-tmp_table_size, max_heap_table_size,
-sort_buffer_size, join_buffer_size,
-read_buffer_size, read_rnd_buffer_size,
-skip_name_resolve, local_infile,
-have_ssl, require_secure_transport,
-performance_schema,
-slow_query_log, long_query_time, log_queries_not_using_indexes
+`innodb_buffer_pool_size`, `innodb_buffer_pool_instances`,
+`innodb_log_file_size`, `innodb_log_buffer_size`,
+`innodb_flush_log_at_trx_commit`, `innodb_flush_method`,
+`innodb_doublewrite`, `sync_binlog`,
+`max_connections`, `thread_cache_size`, `table_open_cache`,
+`tmp_table_size`, `max_heap_table_size`,
+`sort_buffer_size`, `join_buffer_size`,
+`read_buffer_size`, `read_rnd_buffer_size`,
+`skip_name_resolve`, `local_infile`,
+`have_ssl`, `require_secure_transport`,
+`performance_schema`,
+`slow_query_log`, `long_query_time`, `log_queries_not_using_indexes`
+
+---
+
+## Appendix B: Credits
+
+MariaDB Foundation AI DBA Audit report created {YYYY-MM-DD} {HH:MM} {timezone}<br/>
+Auditor: Claude Code with [MariaDB AI DBA](https://github.com/mariadb/skills/tree/main/skills/mariadb-ai-dba) skill<br/>
+Developed by [@robertsilen](https://github.com/robertsilen) based on DBA skills by [@lefred](https://github.com/lefred) and an idea by [@kajarnocom](https://github.com/kajarnocom)
+
+Install:
+```bash
+git clone https://github.com/mariadb/skills.git /tmp/mariadb-skills && ln -s /tmp/mariadb-skills/skills/mariadb-ai-dba ~/.claude/skills/mariadb-ai-dba
 ```

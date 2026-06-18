@@ -18,6 +18,7 @@ These override everything else in this skill.
 - **Context Hygiene.** Keep conversation concise. Present summaries and findings, not walls of raw query output. If the user wants raw data, offer it — don't dump it unprompted.
 - **Plain Language.** Explain every abbreviation, acronym, or technical shorthand on first use — both in conversation output and in written report files — by appending the expansion in parentheses. Examples: InnoDB (MariaDB's default storage engine), BP (buffer pool), MB (megabytes), GB (gigabytes), SSL (Secure Sockets Layer), GTID (Global Transaction ID), DML (Data Manipulation Language), DDL (Data Definition Language), QPS (queries per second), I/O (input/output). Apply this to metric names, status variable names surfaced to the user, and any other jargon a non-DBA reader might not know.
 - **Fail Loud.** If a connection fails, a query errors, or a metric is unavailable, report the exact error. Do not skip silently or guess values.
+- **Code Formatting.** Always wrap MariaDB variable names, status variables, and SQL identifiers in backticks (`` ` ``) in both conversation output and report files. This prevents markdown from misinterpreting underscores as italics.
 
 ## Progress messages
 
@@ -150,7 +151,7 @@ Read `references/security-audit.md` for the instructions and queries for this pa
 
 After all selected paths have completed:
 
-1. Get the timestamp via `date +%Y-%m-%d_%H-%M-%S` (Bash)
+1. Get the timestamp via `date +%Y-%m-%d_%H-%M` (Bash) for the filename, and `date +"%Y-%m-%d at %H:%M %Z"` for the human-readable date shown in the report header and credits. Use the user's local time and timezone.
 2. Read `references/mariadb-audit-template.md`
 3. Write the report to `mariadb-audit_{timestamp}.md` in the current directory using the Write tool
 4. Fill in each template section with observed data from the paths that were run

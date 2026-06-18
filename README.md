@@ -1,3 +1,5 @@
+<img src="MariaDB_Foundation_logo.png" alt="MariaDB Foundation" width="300">
+
 # MariaDB AI DBA
 
 An AI-powered database administrator skill for Claude Code. Connects to a MariaDB server and produces a comprehensive audit report covering server health, query optimization, security, and MariaDB-specific feature opportunities.
