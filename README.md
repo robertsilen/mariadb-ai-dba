@@ -84,9 +84,13 @@ Pass it to the skill when prompted: choose **Defaults file** and provide the pat
 
 Falls back to the `mariadb` CLI client if Python or the module is unavailable.
 
+### Snapshot trending
+
+Each audit run saves a JSON snapshot to `./snapshots/`. On subsequent runs, the collector computes deltas between the current and previous snapshot — showing how query rates, buffer pool usage, connection counts, and other metrics have changed over time. The more snapshots you accumulate, the richer the trend data in your reports.
+
 ### Optional: continuous monitoring
 
-For time-series trending with graphs, run the collector as a daemon before your next audit:
+For high-resolution time-series trending with graphs, run the collector as a daemon before your next audit:
 
 ```bash
 python3 skills/mariadb-ai-dba/collect.py --daemon --interval 1 --socket /tmp/mysql.sock --snapshots-dir ./snapshots
