@@ -113,6 +113,8 @@ This produces structured JSON with all sections: server, innodb, innodb_status, 
 
 Parse the JSON output and use it for all paths below. The collector handles OS-level checks, all SQL queries, and error handling in a single invocation.
 
+**Deltas:** If the JSON output contains a `deltas` section, it means a previous snapshot was found and rate changes were computed. Include this data in the report — the template has a "Changes Since Previous Snapshot" subsection under Query Performance Indicators. Also mention delta data in the InnoDB and Connections sections where relevant (e.g. buffer pool page changes, connection count changes).
+
 **Gate:** The JSON output must contain a valid `server.version` field. Report any entries in the `errors` array.
 
 If the Python collector is unavailable, fall back to the heredoc approach in the reference files.

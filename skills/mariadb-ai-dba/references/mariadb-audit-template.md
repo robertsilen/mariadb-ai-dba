@@ -129,6 +129,17 @@ Server-wide counters that characterize the query workload. All values are cumula
 | `Created_tmp_disk_tables` | {n} | {rate} |
 | `Handler_read_rnd_next` (full-scan row reads) | {n} | {rate} |
 
+### Changes Since Previous Snapshot
+
+If the collector JSON contains a `deltas` section, add this table showing how key metrics changed between the current and previous snapshot. Present the delta values and per-second rates. Skip this subsection if no deltas are available.
+
+| Metric | Previous Rate (/sec) | Current Rate (/sec) | Change |
+|--------|---------------------|---------------------|--------|
+| Questions | {prev_rate} | {cur_rate} | {+/-pct}% |
+| etc. for all metrics in `deltas.rates` that have non-zero deltas |
+
+Also note the time elapsed between snapshots and the previous snapshot timestamp.
+
 ### Slow Query Log Configuration
 
 | Setting | Value |
