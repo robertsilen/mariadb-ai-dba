@@ -134,6 +134,7 @@ def collect_innodb(cur):
         "innodb_adaptive_hash_index",
         "innodb_flush_neighbors", "innodb_autoinc_lock_mode",
         "innodb_stats_on_metadata", "innodb_lru_scan_depth",
+        "innodb_file_per_table",
     ]
 
     for var in variables:
@@ -802,6 +803,20 @@ def collect_os():
             if numa_dir.exists():
                 nodes = [d.name for d in numa_dir.iterdir() if d.name.startswith("node")]
                 data["numa_nodes"] = len(nodes)
+        except Exception:
+            pass
+
+        # MariaDB process swap usage
+        try:
+            pid = subprocess.check_output(
+                ["bash", "-c", "pidof mariadbd || pidof mysqld"],
+                text=True, stderr=subprocess.DEVNULL).strip().split()[0]
+            with open(f"/proc/{pid}/status") as f:
+                for line in f:
+                    if line.startswith("VmSwap"):
+                        kb = int(line.split()[1])
+                        data["mariadbd_vmswap_kb"] = kb
+                        break
         except Exception:
             pass
 
