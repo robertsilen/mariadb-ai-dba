@@ -903,25 +903,73 @@ def run_snapshot(conn, args):
             json.dump(result, f, default=str)
         result["meta"]["snapshot_file"] = str(snap_path)
 
-        # Load previous snapshots for delta computation
-        prev = load_previous_snapshot(snap_dir, snap_path)
+        # Load previous snapshot for delta computation
+        if args.compare_to:
+            prev = load_snapshot_file(Path(args.compare_to))
+        else:
+            hostname = result.get("meta", {}).get("hostname", "unknown")
+            port = result.get("server", {}).get("port", 3306)
+            prev = load_previous_snapshot(snap_dir, snap_path, hostname, port)
         if prev:
             result["deltas"] = compute_deltas(prev, result)
+            result["deltas"]["compare_file"] = prev.get("_source_file", "unknown")
 
     json.dump(result, sys.stdout, indent=2, default=str)
     print()
 
 
-def load_previous_snapshot(snap_dir, current_path):
+def load_snapshot_file(path):
+    try:
+        with open(path) as f:
+            data = json.load(f)
+        data["_source_file"] = str(path)
+        return data
+    except Exception:
+        return None
+
+
+def load_previous_snapshot(snap_dir, current_path, hostname, port):
     snapshots = sorted(snap_dir.glob("snapshot_*.json"))
     snapshots = [s for s in snapshots if s != current_path]
     if not snapshots:
         return None
-    try:
-        with open(snapshots[-1]) as f:
-            return json.load(f)
-    except Exception:
-        return None
+    # Try to find most recent snapshot from the same server
+    for s in reversed(snapshots):
+        try:
+            with open(s) as f:
+                data = json.load(f)
+            snap_host = data.get("meta", {}).get("hostname", "")
+            snap_port = data.get("server", {}).get("port", 3306)
+            if snap_host == hostname and snap_port == port:
+                data["_source_file"] = str(s)
+                return data
+        except Exception:
+            continue
+    return None
+
+
+def list_snapshots(snap_dir):
+    snapshots = sorted(snap_dir.glob("snapshot_*.json"))
+    if not snapshots:
+        print("No snapshots found.")
+        return
+    result = []
+    for s in snapshots:
+        try:
+            with open(s) as f:
+                data = json.load(f)
+            result.append({
+                "file": s.name,
+                "path": str(s),
+                "timestamp": data.get("meta", {}).get("timestamp", "unknown"),
+                "hostname": data.get("meta", {}).get("hostname", "unknown"),
+                "port": data.get("server", {}).get("port", "unknown"),
+                "version": data.get("server", {}).get("version", "unknown"),
+            })
+        except Exception:
+            result.append({"file": s.name, "path": str(s), "error": "unreadable"})
+    json.dump(result, sys.stdout, indent=2, default=str)
+    print()
 
 
 def compute_deltas(prev, current):
@@ -1145,6 +1193,7 @@ Examples:
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--snapshot", action="store_true", help="One-shot full data collection")
     mode.add_argument("--daemon", action="store_true", help="Continuous status sampling")
+    mode.add_argument("--list-snapshots", action="store_true", help="List all snapshots in --snapshots-dir and exit")
 
     conn_group = parser.add_argument_group("connection")
     conn_group.add_argument("--socket", help="Unix socket path")
@@ -1155,10 +1204,18 @@ Examples:
     conn_group.add_argument("--password", help="Password")
 
     parser.add_argument("--snapshots-dir", help="Directory to store snapshot/sample files for trending")
+    parser.add_argument("--compare-to", help="Path to a specific snapshot file to compute deltas against")
     parser.add_argument("--interval", type=int, default=1, help="Daemon sampling interval in seconds (default: 1)")
     parser.add_argument("--retention-days", type=int, default=7, help="Days to keep daemon sample files (default: 7)")
 
     args = parser.parse_args()
+
+    if args.list_snapshots:
+        if not args.snapshots_dir:
+            print("Error: --list-snapshots requires --snapshots-dir", file=sys.stderr)
+            sys.exit(1)
+        list_snapshots(Path(args.snapshots_dir))
+        sys.exit(0)
 
     global mariadb
     try:

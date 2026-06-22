@@ -40,6 +40,20 @@ One or two paragraphs in plain language:
 | InnoDB Buffer Pool | {size} ({percent_of_ram}% of RAM) |
 | Security findings | {count by severity, or "Not audited"} |
 
+### Snapshot Comparison
+
+If delta data is available (the collector JSON contains a `deltas` section), include this box:
+
+> **Compared against snapshot from {previous_timestamp} ({elapsed human-readable, e.g. "2 days ago" or "3 minutes ago"}).** {N} historical snapshots of this server are available. Metrics marked with Δ show changes since the comparison snapshot.
+
+If no delta data is available:
+
+> **First snapshot of this server.** No comparison data available. Run the audit again later to see how metrics change over time.
+
+If comparing to a different server:
+
+> **Compared against snapshot from {other_hostname}:{port} taken {previous_timestamp}.** Cross-server comparison — absolute values differ by hardware and workload; focus on ratios and patterns.
+
 ---
 
 ## 2. Server Identity & Environment

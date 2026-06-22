@@ -97,6 +97,32 @@ If the Python collector is not available (missing `mariadb` module or Python 3),
 
 **Gate:** The connection test must return valid JSON with a version string. Do not proceed until this passes.
 
+### Snapshot selection
+
+After the connection is verified, check for existing snapshots:
+
+```bash
+python3 skills/mariadb-ai-dba/collect.py --list-snapshots --snapshots-dir ./snapshots
+```
+
+This returns a JSON array of all snapshots with hostname, port, version, and timestamp.
+
+**If snapshots exist for this server** (matching hostname and port), present them to the user using `AskUserQuestion`:
+
+> "Connected to {hostname} (MariaDB {version}). Found {N} previous snapshots of this server. Which snapshot should I compare against for trending?"
+
+Options:
+1. **Most recent ({date})** (Recommended) — compare against the latest snapshot from this server
+2. **Choose from this server** — list all snapshots from this server with timestamps, let the user pick
+3. **Compare to another server** — list all snapshots from other servers in the directory
+4. **Skip comparison** — no delta computation, snapshot-only report
+
+If the user picks a specific snapshot, pass `--compare-to <path>` to the collector.
+
+**If no snapshots exist for this server**, inform the user:
+
+> "Connected to {hostname} (MariaDB {version}). This is the first snapshot of this server — no trending data available yet. Run the audit again later to see how metrics change over time."
+
 ## Phase 2: Execute selected paths
 
 Read `references/mariadb-audit-template.md` before executing any path. It defines the structure and quality bar for the inventory — use it to guide presentation. The template is a floor, not a ceiling: follow its section structure but add observations beyond it when the data warrants.
