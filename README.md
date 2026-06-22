@@ -78,8 +78,9 @@ Pass it to the skill when prompted: choose **Defaults file** and provide the pat
 - Python 3 with the `mariadb` module (`pip install mariadb`) — requires [MariaDB Connector/C](https://mariadb.com/docs/server/connect/programming-languages/python/install/) at OS level
 - Network access to the target MariaDB server
 - A database user with at least read privileges (see [Security](#security) above for the recommended setup)
+- Optional: `seaborn` (`pip install seaborn`) for time-series graphs in the HTML report
 
-Falls back to the `mariadb` CLI client if Python or the module is unavailable.
+Falls back to the `mariadb` CLI client if Python or the module is unavailable. Graphs are omitted if seaborn is not installed.
 
 ### Snapshot trending
 
@@ -93,4 +94,4 @@ For high-resolution time-series trending with graphs, run the collector as a dae
 python3 skills/mariadb-ai-dba/collect.py --daemon --interval 1 --socket /tmp/mysql.sock --snapshots-dir ./snapshots
 ```
 
-This samples GLOBAL_STATUS every second. The next audit run will include time-series data and trends.
+This samples GLOBAL_STATUS every second. The next audit run will include time-series graphs (query throughput, buffer pool, checkpoint age, threads, I/O, and more) embedded inline in the HTML report. Even without daemon data, graphs are generated from the snapshot history if multiple snapshots exist.

@@ -106,6 +106,25 @@ See the template for Δ column formatting rules. If no deltas exist, omit Δ col
 
 If the Python collector is unavailable, fall back to the heredoc approach in the reference files.
 
+### Graphs (if trending data exists)
+
+After collecting data, check if daemon samples or multiple snapshots exist:
+
+```bash
+python3 skills/mariadb-ai-dba/graph.py --samples-dir ./snapshots/samples --snapshots-dir ./snapshots --hostname {hostname} --port {port}
+```
+
+This outputs JSON with a `graphs` array. Each graph has `id`, `title`, `section` (which report section it belongs to), and `svg_base64` (a base64-encoded SVG image). If `seaborn`/`matplotlib` are not installed or fewer than 2 data points exist, the output will have an empty graphs array — skip graph embedding in that case.
+
+To embed a graph in the HTML report, place it inline under the relevant section heading:
+```html
+<img src="data:image/svg+xml;base64,{svg_base64}" alt="{title}" style="width:100%;max-width:750px;margin:12px 0;">
+```
+
+Graph-to-section mapping: graphs with `section: "innodb"` go under section 3 (InnoDB), `section: "connections"` under section 4, `section: "performance"` under section 5. Place each graph after the relevant table in that section.
+
+If no graphs are available (missing dependencies or insufficient data), skip this step — the report works fine without graphs.
+
 Read `references/mariadb-audit-template.md` — it defines the report structure and quality bar. The template is a floor, not a ceiling: follow its section structure but add observations beyond it when the data warrants.
 
 ### Server overview
