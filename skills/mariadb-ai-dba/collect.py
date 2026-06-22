@@ -990,18 +990,22 @@ def compute_deltas(prev, current):
     deltas["elapsed_seconds"] = elapsed
     deltas["previous_timestamp"] = prev.get("meta", {}).get("timestamp")
 
+    # --- Rate-based comparisons (cumulative counters) ---
     rate_vars = [
         "QUESTIONS", "QUERIES", "COM_SELECT", "COM_INSERT", "COM_UPDATE", "COM_DELETE",
         "COM_COMMIT", "COM_ROLLBACK",
         "SLOW_QUERIES", "CREATED_TMP_TABLES", "CREATED_TMP_DISK_TABLES",
-        "SELECT_FULL_JOIN", "SORT_MERGE_PASSES",
+        "SELECT_SCAN", "SELECT_FULL_JOIN", "SELECT_RANGE", "SORT_MERGE_PASSES",
+        "HANDLER_READ_RND_NEXT",
         "INNODB_BUFFER_POOL_READ_REQUESTS", "INNODB_BUFFER_POOL_READS",
+        "INNODB_BUFFER_POOL_PAGES_FLUSHED", "INNODB_BUFFER_POOL_PAGES_LRU_FLUSHED",
         "INNODB_ROWS_INSERTED", "INNODB_ROWS_UPDATED", "INNODB_ROWS_DELETED", "INNODB_ROWS_READ",
         "INNODB_DATA_READS", "INNODB_DATA_WRITES",
         "INNODB_LOG_WRITES", "INNODB_LOG_WAITS",
         "INNODB_ROW_LOCK_WAITS", "INNODB_DEADLOCKS",
         "TABLE_LOCKS_WAITED",
         "ABORTED_CONNECTS", "ABORTED_CLIENTS",
+        "CONNECTIONS", "THREADS_CREATED",
     ]
 
     rates = {}
@@ -1009,30 +1013,76 @@ def compute_deltas(prev, current):
         prev_val = safe_int(prev_status.get(var, 0))
         cur_val = safe_int(cur_status.get(var, 0))
         delta = cur_val - prev_val
-        if delta > 0:
-            rates[var.lower()] = {
-                "delta": delta,
-                "rate_per_sec": round(delta / elapsed, 2),
-            }
+        rates[var.lower()] = {
+            "previous": prev_val,
+            "current": cur_val,
+            "delta": delta,
+            "rate_per_sec": round(delta / elapsed, 6),
+        }
     deltas["rates"] = rates
 
-    # Absolute value comparisons
-    abs_vars = [
+    # --- Gauge comparisons (point-in-time values from status) ---
+    gauge_vars = [
         "INNODB_BUFFER_POOL_PAGES_DATA", "INNODB_BUFFER_POOL_PAGES_DIRTY",
-        "INNODB_BUFFER_POOL_PAGES_FREE",
+        "INNODB_BUFFER_POOL_PAGES_FREE", "INNODB_BUFFER_POOL_PAGES_TOTAL",
+        "INNODB_CHECKPOINT_AGE", "INNODB_CHECKPOINT_MAX_AGE",
         "INNODB_HISTORY_LIST_LENGTH",
-        "THREADS_CONNECTED", "THREADS_RUNNING",
+        "INNODB_DATA_PENDING_READS", "INNODB_DATA_PENDING_WRITES",
+        "THREADS_CONNECTED", "THREADS_RUNNING", "THREADS_CACHED",
+        "MAX_USED_CONNECTIONS",
+        "OPEN_TABLES", "OPENED_TABLES",
     ]
-    absolutes = {}
-    for var in abs_vars:
+    gauges = {}
+    for var in gauge_vars:
         prev_val = prev_status.get(var)
         cur_val = cur_status.get(var)
         if prev_val is not None and cur_val is not None:
-            absolutes[var.lower()] = {
+            gauges[var.lower()] = {
                 "previous": prev_val,
                 "current": cur_val,
+                "changed": str(prev_val) != str(cur_val),
             }
-    deltas["absolutes"] = absolutes
+    deltas["gauges"] = gauges
+
+    # --- Config comparisons (settings that may have been changed) ---
+    config_sections = {
+        "innodb": [
+            "innodb_buffer_pool_size", "innodb_log_file_size", "innodb_log_buffer_size",
+            "innodb_flush_log_at_trx_commit", "innodb_flush_method", "innodb_doublewrite",
+            "sync_binlog", "innodb_io_capacity", "innodb_io_capacity_max",
+            "innodb_adaptive_hash_index", "innodb_flush_neighbors",
+            "innodb_autoinc_lock_mode", "innodb_stats_on_metadata",
+            "innodb_lru_scan_depth", "innodb_file_per_table",
+            "innodb_buffer_pool_dump_at_shutdown", "innodb_buffer_pool_load_at_startup",
+        ],
+        "connections": [
+            "max_connections", "thread_cache_size", "table_open_cache",
+            "table_definition_cache", "skip_name_resolve",
+            "tmp_table_size", "max_heap_table_size", "table_open_cache_instances",
+        ],
+        "performance": [
+            "slow_query_log", "long_query_time", "log_queries_not_using_indexes",
+            "performance_schema", "sort_buffer_size", "join_buffer_size",
+            "read_buffer_size", "read_rnd_buffer_size",
+        ],
+        "security": [
+            "require_secure_transport", "local_infile", "have_ssl",
+        ],
+    }
+    config_changes = {}
+    for section, keys in config_sections.items():
+        prev_section = prev.get(section, {})
+        cur_section = current.get(section, {})
+        for key in keys:
+            prev_val = prev_section.get(key)
+            cur_val = cur_section.get(key)
+            if prev_val is not None and cur_val is not None:
+                config_changes[key] = {
+                    "previous": prev_val,
+                    "current": cur_val,
+                    "changed": str(prev_val) != str(cur_val),
+                }
+    deltas["config"] = config_changes
 
     return deltas
 

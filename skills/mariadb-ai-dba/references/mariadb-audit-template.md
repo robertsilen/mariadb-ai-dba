@@ -9,6 +9,14 @@ This file defines the structure and quality bar for the `mariadb-audit.md` outpu
 - Every abbreviation or technical term must be expanded on first use (per the Plain Language principle).
 - Present facts and measurements. Do not assign severity levels, suggest fixes, or make recommendations — except in the Security section, where severity and fix recommendations are always included.
 
+**Δ (delta) columns:**
+- When the collector JSON contains a `deltas` section, tables in sections 3–5 and Appendix A include a **Δ** column showing the previous snapshot's value for comparison.
+- For **config settings**: write **=** if unchanged. If a value changed, show the previous value (e.g. "was: 128M").
+- For **gauge metrics** (buffer pool pages, connections, checkpoint age): write **=** if unchanged. If changed, show the previous value (e.g. "was: 6,200").
+- For **cumulative counters** (queries, selects, etc.): the Δ column shows the **rate during the comparison window** (delta / elapsed seconds), not the previous raw counter. This contrasts with the "Rate" column which is the lifetime average. Write **=** if the rate is identical.
+- In the HTML report, if a Δ value differs from the current value, wrap it in `<span class="delta-changed">` to highlight the change. If unchanged, use `<span class="delta-unchanged">=</span>`.
+- If no deltas are available, **omit the Δ column entirely** — do not show a column of equals signs.
+
 ---
 
 <img src="https://raw.githubusercontent.com/robertsilen/mariadb-ai-dba/main/MariaDB_Foundation_logo.png" alt="MariaDB Foundation">
@@ -80,33 +88,32 @@ InnoDB manages how data is stored, cached, and written to disk. This section doc
 
 ### Buffer Pool (BP)
 
-| Setting / Metric | Value | Description |
-|------------------|-------|-------------|
-| Size | {size} | Allocated buffer pool memory ({percent}% of total RAM) |
-| Hit ratio | {ratio}% | Calculated as (`innodb_buffer_pool_read_requests` - `innodb_buffer_pool_reads`) / `innodb_buffer_pool_read_requests` × 100 |
-| Pages: total / data / dirty / free | | Current page allocation within the buffer pool |
-| Instances | {n} | Number of buffer pool instances (removed in MariaDB 11.x+) |
-| Dump at shutdown | {ON/OFF} | Whether buffer pool contents are saved on shutdown |
-| Load at startup | {ON/OFF} | Whether saved buffer pool contents are loaded on startup |
+| Setting / Metric | Value | Δ | Description |
+|------------------|-------|---|-------------|
+| Size | {size} | {prev or =} | Allocated buffer pool memory ({percent}% of total RAM) |
+| Hit ratio | {ratio}% | {prev or =} | Calculated as (`innodb_buffer_pool_read_requests` - `innodb_buffer_pool_reads`) / `innodb_buffer_pool_read_requests` × 100 |
+| Pages: data / dirty / free | {cur} | {prev or =} | 16 KB pages; current page allocation within the buffer pool |
+| Dump at shutdown | {ON/OFF} | {prev or =} | Whether buffer pool contents are saved on shutdown |
+| Load at startup | {ON/OFF} | {prev or =} | Whether saved buffer pool contents are loaded on startup |
 
 ### Durability & Logging
 
-| Setting | Value | Description |
-|---------|-------|-------------|
-| `innodb_flush_log_at_trx_commit` | {0/1/2} | 0 = flush approximately once per second, 1 = flush on every commit (full ACID), 2 = write to OS buffer on commit, flush once per second |
-| `sync_binlog` | {0/1/N} | 0 = OS controls flushing, 1 = sync on every commit, N = sync every N commits |
-| `innodb_flush_method` | {value} | How InnoDB flushes data and log files to disk |
-| `innodb_doublewrite` | {ON/OFF} | Doublewrite buffer for crash recovery protection against torn pages |
-| `innodb_log_file_size` | {size} | Size of each redo log file |
-| `innodb_log_buffer_size` | {size} | Memory buffer for redo log writes |
+| Setting | Value | Δ | Description |
+|---------|-------|---|-------------|
+| `innodb_flush_log_at_trx_commit` | {0/1/2} | {prev or =} | 0 = flush approximately once per second, 1 = flush on every commit (full ACID), 2 = write to OS buffer on commit, flush once per second |
+| `sync_binlog` | {0/1/N} | {prev or =} | 0 = OS controls flushing, 1 = sync on every commit, N = sync every N commits |
+| `innodb_flush_method` | {value} | {prev or =} | How InnoDB flushes data and log files to disk |
+| `innodb_doublewrite` | {ON/OFF} | {prev or =} | Doublewrite buffer for crash recovery protection against torn pages |
+| `innodb_log_file_size` | {size} | {prev or =} | Size of each redo log file |
+| `innodb_log_buffer_size` | {size} | {prev or =} | Memory buffer for redo log writes |
 
 ### Checkpoint Health
 
-| Metric | Value |
-|--------|-------|
-| Checkpoint age | {value} |
-| Max checkpoint age | {value} |
-| Checkpoint age as % of max | {percent}% |
+| Metric | Value | Δ |
+|--------|-------|---|
+| Checkpoint age | {value} | {prev or =} |
+| Max checkpoint age | {value} | {prev or =} |
+| Checkpoint age as % of max | {percent}% | {prev or =} |
 
 ---
 
@@ -114,15 +121,15 @@ InnoDB manages how data is stored, cached, and written to disk. This section doc
 
 Each client connection consumes memory and a thread. This section documents the current connection configuration and usage.
 
-| Setting / Metric | Value | Description |
-|------------------|-------|-------------|
-| Current connections | {n} | Active connections at time of snapshot |
-| Peak connections (`Max_used_connections`) | {n} | Highest simultaneous connections since last restart |
-| `max_connections` | {n} | Configured connection limit (utilization: peak / max = {percent}%) |
-| Aborted connects | {n} | Failed connection attempts ({rate}/day over {uptime}) |
-| Aborted clients | {n} | Connections closed improperly ({rate}/day over {uptime}) |
-| `thread_cache_size` | {n} | Threads kept cached for reuse |
-| `skip_name_resolve` | {ON/OFF} | Whether DNS reverse lookups are skipped on connect |
+| Setting / Metric | Value | Δ | Description |
+|------------------|-------|---|-------------|
+| Current connections | {n} | {prev or =} | Active connections at time of snapshot |
+| Peak connections (`Max_used_connections`) | {n} | {prev or =} | Highest simultaneous connections since last restart |
+| `max_connections` | {n} | {prev or =} | Configured connection limit (utilization: peak / max = {percent}%) |
+| Aborted connects | {n} | {prev or =} | Failed connection attempts ({rate}/day over {uptime}) |
+| Aborted clients | {n} | {prev or =} | Connections closed improperly ({rate}/day over {uptime}) |
+| `thread_cache_size` | {n} | {prev or =} | Threads kept cached for reuse |
+| `skip_name_resolve` | {ON/OFF} | {prev or =} | Whether DNS reverse lookups are skipped on connect |
 
 ---
 
@@ -132,35 +139,26 @@ Server-wide counters that characterize the query workload. All values are cumula
 
 ### Global Counters
 
-| Metric | Value | Rate (/sec) |
-|--------|-------|-------------|
-| Questions (total queries) | {n} | {rate} |
-| Slow queries | {n} | {rate} |
-| `Select_scan` (full table scans) | {n} | {rate} |
-| `Select_full_join` (joins without indexes) | {n} | {rate} |
-| `Sort_merge_passes` | {n} | {rate} |
-| `Created_tmp_tables` | {n} | {rate} |
-| `Created_tmp_disk_tables` | {n} | {rate} |
-| `Handler_read_rnd_next` (full-scan row reads) | {n} | {rate} |
+| Metric | Value | Rate (/sec) | Δ Rate (/sec) |
+|--------|-------|-------------|----------------|
+| Questions (total queries) | {n} | {lifetime rate} | {delta window rate or —} |
+| Slow queries | {n} | {rate} | {delta or =} |
+| `Select_scan` (full table scans) | {n} | {rate} | {delta or =} |
+| `Select_full_join` (joins without indexes) | {n} | {rate} | {delta or =} |
+| `Sort_merge_passes` | {n} | {rate} | {delta or =} |
+| `Created_tmp_tables` | {n} | {rate} | {delta or =} |
+| `Created_tmp_disk_tables` | {n} | {rate} | {delta or =} |
+| `Handler_read_rnd_next` (full-scan row reads) | {n} | {rate} | {delta or =} |
 
-### Changes Since Previous Snapshot
-
-If the collector JSON contains a `deltas` section, add this table showing how key metrics changed between the current and previous snapshot. Present the delta values and per-second rates. Skip this subsection if no deltas are available.
-
-| Metric | Previous Rate (/sec) | Current Rate (/sec) | Change |
-|--------|---------------------|---------------------|--------|
-| Questions | {prev_rate} | {cur_rate} | {+/-pct}% |
-| etc. for all metrics in `deltas.rates` that have non-zero deltas |
-
-Also note the time elapsed between snapshots and the previous snapshot timestamp.
+The "Rate" column is the lifetime average (value / uptime). The "Δ Rate" column is the rate during the comparison window only (delta / elapsed seconds between snapshots) — this shows recent activity vs the long-run average. If no previous snapshot exists, omit the Δ column entirely.
 
 ### Slow Query Log Configuration
 
-| Setting | Value |
-|---------|-------|
-| `slow_query_log` | {ON/OFF} |
-| `long_query_time` | {seconds} |
-| `log_queries_not_using_indexes` | {ON/OFF} |
+| Setting | Value | Δ |
+|---------|-------|---|
+| `slow_query_log` | {ON/OFF} | {prev or =} |
+| `long_query_time` | {seconds} | {prev or =} |
+| `log_queries_not_using_indexes` | {ON/OFF} | {prev or =} |
 
 ### Statement Digest Analysis (requires Performance Schema)
 
@@ -332,20 +330,39 @@ Include any replication errors or warnings.
 
 Reference values for DBAs who want to verify observations or spot issues not covered by the automated checks.
 
-Selected `@@global.*` values for expert review. Include at minimum:
+Present as a table with a Δ column when delta data is available. The Δ column shows the previous snapshot's value — only show rows where the value changed, or show all rows with "—" for unchanged values.
 
-`innodb_buffer_pool_size`, `innodb_buffer_pool_instances`,
-`innodb_log_file_size`, `innodb_log_buffer_size`,
-`innodb_flush_log_at_trx_commit`, `innodb_flush_method`,
-`innodb_doublewrite`, `sync_binlog`,
-`max_connections`, `thread_cache_size`, `table_open_cache`,
-`tmp_table_size`, `max_heap_table_size`,
-`sort_buffer_size`, `join_buffer_size`,
-`read_buffer_size`, `read_rnd_buffer_size`,
-`skip_name_resolve`, `local_infile`,
-`have_ssl`, `require_secure_transport`,
-`performance_schema`,
-`slow_query_log`, `long_query_time`, `log_queries_not_using_indexes`
+| Variable | Value | Δ |
+|----------|-------|---|
+| `innodb_buffer_pool_size` | {value} | {prev or =} |
+| `innodb_log_file_size` | {value} | {prev or =} |
+| `innodb_log_buffer_size` | {value} | {prev or =} |
+| `innodb_flush_log_at_trx_commit` | {value} | {prev or =} |
+| `innodb_flush_method` | {value} | {prev or =} |
+| `innodb_doublewrite` | {value} | {prev or =} |
+| `sync_binlog` | {value} | {prev or =} |
+| `max_connections` | {value} | {prev or =} |
+| `thread_cache_size` | {value} | {prev or =} |
+| `table_open_cache` | {value} | {prev or =} |
+| `tmp_table_size` | {value} | {prev or =} |
+| `max_heap_table_size` | {value} | {prev or =} |
+| `sort_buffer_size` | {value} | {prev or =} |
+| `join_buffer_size` | {value} | {prev or =} |
+| `read_buffer_size` | {value} | {prev or =} |
+| `read_rnd_buffer_size` | {value} | {prev or =} |
+| `skip_name_resolve` | {value} | {prev or =} |
+| `local_infile` | {value} | {prev or =} |
+| `have_ssl` | {value} | {prev or =} |
+| `require_secure_transport` | {value} | {prev or =} |
+| `performance_schema` | {value} | {prev or =} |
+| `slow_query_log` | {value} | {prev or =} |
+| `long_query_time` | {value} | {prev or =} |
+| `log_queries_not_using_indexes` | {value} | {prev or =} |
+| `innodb_io_capacity` | {value} | {prev or =} |
+| `innodb_io_capacity_max` | {value} | {prev or =} |
+| `innodb_adaptive_hash_index` | {value} | {prev or =} |
+| `innodb_flush_neighbors` | {value} | {prev or =} |
+| `innodb_file_per_table` | {value} | {prev or =} |
 
 ---
 

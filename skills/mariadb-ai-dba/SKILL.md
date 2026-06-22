@@ -23,111 +23,69 @@ These override everything else in this skill.
 
 ## Progress messages
 
-Print a short progress message when entering each phase so the user can follow along. Use the phase number and name:
+Print a short progress message at key moments so the user can follow along:
 
-- "**Phase 0: Preparations**" (companion skills, then audit scope menu)
-- "**Phase 1: Connection**"
-- "**Phase 2: Data collection** — Running server overview..." / "Server overview complete. Running security audit..." etc.
-- "**Phase 3: Report generation**"
-- "**Phase 4: What next**"
+- "**Connecting...**" (before connection)
+- "**Collecting data...**" (before running the collector)
+- "**Generating report...**" (before writing the report)
 
-## Phase 0: Preparations
+Keep it brief. No phase numbers.
 
-Before doing anything else, attempt to invoke these skills to load their knowledge into context. They inform your analysis throughout all phases:
+## Step 1: Connect
 
-- `mariadb-features` — MariaDB-specific features and capabilities
-- `mariadb-query-optimization` — query optimization techniques for MariaDB
-- `mysql-to-mariadb` — MySQL/MariaDB compatibility guide; ensures recommendations use MariaDB-native approaches rather than MySQL habits
+**Ask the user one question: how to connect.** This is the only interactive prompt before data collection begins. Use the `AskUserQuestion` tool:
 
-If any skill is not installed, use the `AskUserQuestion` tool to ask the user:
+Header: "Connection"
 
-Question: "Companion skills not found: {list missing skills}. These improve the analysis with MariaDB-specific knowledge. Want to install them from GitHub?"
+Question: "How should I connect to the MariaDB server?"
 
 Options:
-1. **Yes, install from GitHub** — clone `https://github.com/MariaDB/skills.git` into a temporary location, then symlink the missing skills into `~/.claude/skills/`. After symlinking, invoke the skills to load them.
-2. **No, skip** — continue without them; analysis will be less MariaDB-specific.
-
-If the user chooses to install, run:
-```bash
-git clone --depth 1 https://github.com/MariaDB/skills.git /tmp/mariadb-skills
-```
-Then for each missing skill, symlink:
-```bash
-ln -s /tmp/mariadb-skills/skills/{skill-name} ~/.claude/skills/{skill-name}
-```
-Then invoke each skill. If the clone or symlink fails, report the error and continue without.
-
-### Choose audit scope
-
-After companion skills are loaded, use the `AskUserQuestion` tool with **multiSelect: true**. If the user selects nothing or selects "Other" with no text, run all four paths.
-
-Header: "Audit scope"
-
-Question: "Select which data collection paths to include in the audit. A timestamped report file will be generated at the end with all findings."
-
-Options (exactly 4 — do not add any extra options):
-
-1. **Server overview** — server state, InnoDB health, connections, buffer pool, replication, and performance counters
-2. **Query optimization** — slow query config, missing indexes, schema analysis, duplicate indexes, and Performance Schema statement profiling (if enabled)
-3. **MariaDB features** — which MariaDB-specific features are in use and which are available
-4. **Security audit** — users, grants, privileges, SSL status, authentication, and access control
-
-If the user selects none or does not interact with the checkboxes, run all four paths.
-
-## Phase 1: Connect
-
-**Always ask the user how to connect before running any queries.** Do not auto-connect. Use the `AskUserQuestion` tool to present these options — never print them as a text list:
-
-1. **Local MariaDB** — connect via local socket auth (typical for development)
-2. **Defaults file** — provide a path to a `.my.cnf` file (recommended for production; keeps credentials out of process list)
+1. **Local socket** (Recommended) — connect via local socket auth (typical for development)
+2. **Defaults file** — provide a path to a `.my.cnf` file (keeps credentials out of process list)
 3. **Remote server** — provide host, port, user, password
 
-Wait for the user to choose. Build the connection arguments for the Python collector:
+Build the connection arguments for the Python collector:
 
 - **Local**: `--socket /tmp/mysql.sock` (or the default socket path)
 - **Defaults file**: `--defaults-file /path/to/.my.cnf`
-- **Remote**: `--host HOST --port PORT --user USER --password PASS` — warn that the password will be visible in the process list and suggest `--defaults-file` as a more secure alternative.
+- **Remote**: `--host HOST --port PORT --user USER --password PASS`
 
-Test the connection by running:
-```bash
-python3 skills/mariadb-ai-dba/collect.py --snapshot <connection-args> 2>&1 | head -5
-```
+Test the connection by running the collector. If the Python collector is not available (missing `mariadb` module or Python 3), offer to install with `pip install mariadb`, or fall back to the shell heredoc approach in the reference files.
 
-If the Python collector is not available (missing `mariadb` module or Python 3), fall back to the shell heredoc approach described in the reference files. Offer to install the module with `pip install mariadb`.
+**Gate:** The connection must succeed before proceeding.
 
-**Gate:** The connection test must return valid JSON with a version string. Do not proceed until this passes.
+### Companion skills (silent)
 
-### Snapshot selection
+After the connection is verified, silently attempt to invoke these companion skills to load MariaDB-specific knowledge. Do not ask the user about them — just try, skip any that are not installed:
 
-After the connection is verified, check for existing snapshots:
+- `mariadb-features`
+- `mariadb-query-optimization`
+- `mysql-to-mariadb`
+
+### Snapshot comparison
+
+After connecting, check for existing snapshots:
 
 ```bash
 python3 skills/mariadb-ai-dba/collect.py --list-snapshots --snapshots-dir ./snapshots
 ```
 
-This returns a JSON array of all snapshots with hostname, port, version, and timestamp.
+**If snapshots exist for this server** (matching hostname and port), use `AskUserQuestion` to suggest comparing against the most recent one:
 
-**If snapshots exist for this server** (matching hostname and port), present them to the user using `AskUserQuestion`:
+Header: "Snapshot"
 
-> "Connected to {hostname} (MariaDB {version}). Found {N} previous snapshots of this server. Which snapshot should I compare against for trending?"
+Question: "Found {N} previous snapshots of this server. Compare against the latest from {date} to show what changed?"
 
 Options:
-1. **Most recent ({date})** (Recommended) — compare against the latest snapshot from this server
-2. **Choose from this server** — list all snapshots from this server with timestamps, let the user pick
-3. **Compare to another server** — list all snapshots from other servers in the directory
-4. **Skip comparison** — no delta computation, snapshot-only report
+1. **Yes, compare to latest** (Recommended) — include delta/trending data in the report
+2. **Choose a different snapshot** — list all available snapshots with timestamps
+3. **Skip comparison** — no delta data, fresh snapshot only
 
 If the user picks a specific snapshot, pass `--compare-to <path>` to the collector.
 
-**If no snapshots exist for this server**, inform the user:
+**If no snapshots exist**, skip this step silently — the collector will note it's the first snapshot in the report.
 
-> "Connected to {hostname} (MariaDB {version}). This is the first snapshot of this server — no trending data available yet. Run the audit again later to see how metrics change over time."
-
-## Phase 2: Execute selected paths
-
-Read `references/mariadb-audit-template.md` before executing any path. It defines the structure and quality bar for the inventory — use it to guide presentation. The template is a floor, not a ceiling: follow its section structure but add observations beyond it when the data warrants.
-
-### Data collection: Python collector (preferred)
+## Step 2: Collect data
 
 Run the Python collector once to gather all data:
 
@@ -135,23 +93,22 @@ Run the Python collector once to gather all data:
 python3 skills/mariadb-ai-dba/collect.py --snapshot <connection-args> --snapshots-dir ./snapshots
 ```
 
-This produces structured JSON with all sections: server, innodb, innodb_status, connections, performance, schema, security, features, replication, os, and a full status_snapshot for trending. When previous snapshots exist in `--snapshots-dir`, the output includes delta computations automatically.
+This produces structured JSON with all sections: server, innodb, innodb_status, connections, performance, schema, security, features, replication, os, and a full status_snapshot for trending. The collector automatically compares against the most recent previous snapshot from the same server.
 
-Parse the JSON output and use it for all paths below. The collector handles OS-level checks, all SQL queries, and error handling in a single invocation.
+**Deltas:** If the JSON output contains a `deltas` section, add a **Δ column** to all tables in sections 3–5 and Appendix A showing previous snapshot values inline. The delta section contains three sub-objects:
+- `deltas.rates` — cumulative counter comparisons (queries, selects, etc.) with `previous`, `current`, `delta`, and `rate_per_sec` for the comparison window
+- `deltas.gauges` — point-in-time metrics (buffer pool pages, connections, checkpoint age) with `previous`, `current`, and `changed` flag
+- `deltas.config` — configuration settings with `previous`, `current`, and `changed` flag
 
-**Deltas:** If the JSON output contains a `deltas` section, it means a previous snapshot was found and rate changes were computed. Include this data in the report — the template has a "Changes Since Previous Snapshot" subsection under Query Performance Indicators. Also mention delta data in the InnoDB and Connections sections where relevant (e.g. buffer pool page changes, connection count changes).
+See the template for Δ column formatting rules. If no deltas exist, omit Δ columns entirely.
 
 **Gate:** The JSON output must contain a valid `server.version` field. Report any entries in the `errors` array.
 
 If the Python collector is unavailable, fall back to the heredoc approach in the reference files.
 
-### Presenting results
+Read `references/mariadb-audit-template.md` — it defines the report structure and quality bar. The template is a floor, not a ceiling: follow its section structure but add observations beyond it when the data warrants.
 
-Between paths, print a short progress update (e.g. "Server overview complete. Running security audit...") as described in the Progress messages section. Do not present menus between paths.
-
-Cross-reference the companion skills loaded in the Preamble to ensure descriptions use correct MariaDB-specific terminology.
-
-### Path: Server overview
+### Server overview
 
 Use the `server`, `os`, `innodb`, `connections`, and `replication` sections from the collector JSON. Reference `references/server-overview.md` for the "Interpreting the results" guidance.
 
@@ -171,45 +128,47 @@ Scale verbosity to the data: a server with straightforward configuration deserve
 
 ---
 
-### Path: Query optimization
+### Query optimization
 
 Use the `performance` and `schema` sections from the collector JSON. Reference `references/query-optimization.md` for the "Interpreting the results" guidance.
 
 ---
 
-### Path: MariaDB features
+### MariaDB features
 
 Use the `features` section from the collector JSON. Reference `references/feature-suggestions.md` for the AI analysis guidance on which features to scan for.
 
 ---
 
-### Path: Security audit
+### Security audit
 
 Use the `security` section from the collector JSON. Reference `references/security-audit.md` for the severity mapping and output format guidance.
 
 ---
 
-## Phase 3: Generate report
+## Step 3: Generate report
 
-After all selected paths have completed:
+After data collection:
 
 1. Get the timestamp via `date +%Y-%m-%d_%H-%M` (Bash) for the filename, and `date +"%Y-%m-%d at %H:%M %Z"` for the human-readable date shown in the report header and credits. Use the user's local time and timezone.
 2. Read `references/mariadb-audit-template.md`
 3. Write the report to `mariadb-audit_{timestamp}.md` in the current directory using the Write tool
-4. Fill in each template section with observed data from the paths that were run
-5. **Keep all template section headers** even for paths that were not run. Every section header in the template that has an explanation paragraph below it must have that same explanation reproduced verbatim in the report — do not paraphrase, shorten, or replace it with your own text. After the explanation, write the section's data (or "Data for this section was not collected." for unselected paths).
+4. Fill in each template section with observed data.
+5. **Keep all template section headers.** Every section header in the template that has an explanation paragraph below it must have that same explanation reproduced verbatim in the report — do not paraphrase, shorten, or replace it with your own text.
 6. Add any additional findings discovered beyond the template's structure
 7. Always include the **Executive Summary** (section 1) to tie everything together
 8. Read `references/mariadb-audit-template.html` for the HTML skeleton with all styling. Write `mariadb-audit_{timestamp}.html` by replacing the body comment with the report content as HTML. The HTML must contain the same content as the .md — including every section explanation paragraph under each header. Use the CSS classes defined in the template (`.badge .critical/.high/.medium/.low`, `.finding`, `.summary-grid`, `.summary-card`, `.note`, `.section-intro`, `pre`, `code`). Do not regenerate or modify the `<style>` block.
 9. Open the HTML file in the default browser: `open mariadb-audit_{timestamp}.html` (macOS), `xdg-open` (Linux), or `start` (Windows)
 10. Confirm both filenames (.md and .html) to the user
 
-## Phase 4: What next
+## Step 4: What next
 
-After the report is generated, use the `AskUserQuestion` tool to present follow-up options:
+After the report is generated, use the `AskUserQuestion` tool:
 
-1. **Dig deeper** — explore a specific finding, question, or area from the audit
-2. **Run additional paths** — only show paths that were not selected in the audit scope menu
-3. **Done** — end the session
+Header: "What next"
 
-If the user chooses to run additional paths, execute them, then regenerate the report with a new timestamp including the new findings alongside the original ones.
+Question: "Report generated. What would you like to do?"
+
+Options:
+1. **Dig deeper** — explore a specific finding, question, or area from the report
+2. **Done** — end the session
