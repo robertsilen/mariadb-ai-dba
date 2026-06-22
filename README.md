@@ -8,18 +8,15 @@ An AI-powered database administrator skill for Claude Code. Connects to a MariaD
 
 When activated, the AI DBA will:
 
-1. Ask which analysis paths to include (multi-select, all selected by default):
-   - **Server overview** — server state, InnoDB configuration, connections, buffer pool, replication, and performance counters
-   - **Query optimization** — slow query config, schema structure, indexes, and Performance Schema statement digests
-   - **MariaDB features** — which MariaDB-specific features are in use and which are available
-   - **Security audit** — users, grants, privileges, SSL status, and authentication configuration
-2. Ask for connection details
-3. Run all selected paths and collect diagnostic data
-4. Generate a timestamped server inventory (`mariadb-audit_{timestamp}.md` + `.html`) with a factual snapshot of the server's configuration, schema, accounts, and performance counters — the HTML version opens in a browser for easy copy-paste into email or Google Docs. Security findings include severity ratings and fix recommendations.
+1. Ask how to connect (local socket, defaults file, or remote)
+2. Collect all diagnostic data in one pass — server overview, InnoDB health, connections, query performance, schema analysis, security audit, and MariaDB feature inventory
+3. Generate a timestamped server inventory (`mariadb-audit_{timestamp}.md` + `.html`) — the HTML version opens in a browser for easy sharing. Security findings include severity ratings and fix recommendations.
+
+If previous snapshots exist, the report includes **Δ columns** showing what changed since the last run — config drift, workload shifts, and gauge changes are highlighted inline.
 
 All queries are read-only. The skill never modifies data, schema, or configuration. Use a [read-only database user](#security) to be sure.
 
-Companion skills from [github.com/MariaDB/skills](https://github.com/MariaDB/skills) are loaded automatically for deeper MariaDB-specific context. If not installed, the skill offers to fetch them from GitHub.
+Companion skills from [github.com/MariaDB/skills](https://github.com/MariaDB/skills) are loaded silently for deeper MariaDB-specific context.
 
 ## How to Use
 
@@ -86,7 +83,7 @@ Falls back to the `mariadb` CLI client if Python or the module is unavailable.
 
 ### Snapshot trending
 
-Each audit run saves a JSON snapshot to `./snapshots/`. On subsequent runs, the collector computes deltas between the current and previous snapshot — showing how query rates, buffer pool usage, connection counts, and other metrics have changed over time. The more snapshots you accumulate, the richer the trend data in your reports.
+Each audit run saves a JSON snapshot to `./snapshots/`. On subsequent runs, the collector automatically compares against the most recent previous snapshot from the same server and computes deltas — rates for cumulative counters, gauge changes for point-in-time metrics, and config drift detection. These appear as **Δ columns** in the report tables: `=` means compared and unchanged, previous values shown when something changed.
 
 ### Optional: continuous monitoring
 
