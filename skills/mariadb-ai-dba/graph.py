@@ -281,6 +281,35 @@ def render_graph(graph_def, samples, fig_width=10, fig_height=3.5):
     if len(series) < 2:
         return None
 
+    # Skip graphs where all data values are effectively zero
+    if graph_type in ("rate", "gauge"):
+        all_max = 0
+        for var in graph_def["vars"]:
+            var_max = max(abs(s.get(var, 0)) for s in series)
+            all_max = max(all_max, var_max)
+        if all_max < 0.1:
+            return None
+    elif graph_type == "computed" and graph_def.get("compute") == "checkpoint_pct":
+        if max(s.get("pct", 0) for s in series) < 0.01:
+            return None
+
+    # Insert NaN at gaps (>3x median interval) to break lines
+    import math
+    intervals = [series[i]["ts"] - series[i-1]["ts"] for i in range(1, len(series))]
+    if intervals:
+        median_interval = sorted(intervals)[len(intervals) // 2]
+        gap_threshold = max(median_interval * 3, 10)
+        patched = [series[0]]
+        for i in range(1, len(series)):
+            if series[i]["ts"] - series[i-1]["ts"] > gap_threshold:
+                gap_point = {"ts": series[i-1]["ts"] + 1}
+                for key in series[i]:
+                    if key != "ts":
+                        gap_point[key] = float("nan")
+                patched.append(gap_point)
+            patched.append(series[i])
+        series = patched
+
     timestamps = [datetime.fromtimestamp(s["ts"]) for s in series]
 
     fig, ax = plt.subplots(figsize=(fig_width, fig_height))
@@ -289,7 +318,7 @@ def render_graph(graph_def, samples, fig_width=10, fig_height=3.5):
         values = [s["pct"] for s in series]
         ax.fill_between(timestamps, values, alpha=0.3)
         ax.plot(timestamps, values, linewidth=1.5)
-        ax.set_ylim(0, max(max(values) * 1.1, 10))
+        ax.set_ylim(0, max(max(v for v in values if not math.isnan(v)) * 1.1, 10))
     elif graph_def.get("stacked"):
         all_series = {}
         for var, label in zip(graph_def["vars"], graph_def["labels"]):
