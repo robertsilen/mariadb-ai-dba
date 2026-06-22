@@ -414,6 +414,45 @@ def generate_all_graphs(samples_dir=None, snapshots_dir=None,
     }
 
 
+def inject_graphs_into_html(html_path, graphs):
+    """Replace <!-- GRAPH:id --> markers in an HTML file with embedded SVG images."""
+    with open(html_path) as f:
+        html = f.read()
+
+    injected = 0
+    for g in graphs:
+        marker = f"<!-- GRAPH:{g['id']} -->"
+        if marker in html:
+            img_tag = (
+                f'<img src="data:image/svg+xml;base64,{g["svg_base64"]}" '
+                f'alt="{g["title"]}" '
+                f'style="width:100%;max-width:750px;margin:12px 0;">'
+            )
+            html = html.replace(marker, img_tag)
+            injected += 1
+
+    # Also replace section-level markers that collect all graphs for a section
+    sections = {}
+    for g in graphs:
+        sections.setdefault(g["section"], []).append(g)
+    for section, section_graphs in sections.items():
+        marker = f"<!-- GRAPHS:{section} -->"
+        if marker in html:
+            img_tags = "\n".join(
+                f'<img src="data:image/svg+xml;base64,{g["svg_base64"]}" '
+                f'alt="{g["title"]}" '
+                f'style="width:100%;max-width:750px;margin:12px 0;">'
+                for g in section_graphs
+            )
+            html = html.replace(marker, img_tags)
+            injected += len(section_graphs)
+
+    with open(html_path, "w") as f:
+        f.write(html)
+
+    return injected
+
+
 def main():
     parser = argparse.ArgumentParser(description="Generate MariaDB trending graphs")
     parser.add_argument("--samples-dir", help="Path to daemon JSONL samples directory")
@@ -421,6 +460,7 @@ def main():
     parser.add_argument("--hostname", help="Filter snapshots by hostname")
     parser.add_argument("--port", type=int, help="Filter snapshots by port")
     parser.add_argument("--output-dir", help="Write individual SVG files here (optional)")
+    parser.add_argument("--inject", help="Inject graphs into this HTML file (replaces <!-- GRAPH:id --> markers)")
     args = parser.parse_args()
 
     if not args.samples_dir and not args.snapshots_dir:
@@ -434,17 +474,28 @@ def main():
         port=args.port,
     )
 
+    if args.inject and result["graphs"]:
+        injected = inject_graphs_into_html(args.inject, result["graphs"])
+        print(f"Injected {injected} graphs into {args.inject}", file=sys.stderr)
+
     if args.output_dir:
         out_dir = Path(args.output_dir)
         out_dir.mkdir(parents=True, exist_ok=True)
         for g in result["graphs"]:
             svg_data = base64.b64decode(g["svg_base64"])
             (out_dir / f"{g['id']}.svg").write_bytes(svg_data)
-            del g["svg_base64"]
-            g["svg_file"] = f"{g['id']}.svg"
-        print(f"Wrote {len(result['graphs'])} graphs to {out_dir}/", file=sys.stderr)
 
-    json.dump(result, sys.stdout, indent=2)
+    # Summary to stdout (without base64 — keep it small for AI context)
+    summary = {
+        "source": result["source"],
+        "sample_count": result["sample_count"],
+        "time_range": result.get("time_range"),
+        "graphs": [{"id": g["id"], "title": g["title"], "section": g["section"]}
+                    for g in result["graphs"]],
+    }
+    if args.inject:
+        summary["injected_into"] = args.inject
+    json.dump(summary, sys.stdout, indent=2)
     print()
 
 
