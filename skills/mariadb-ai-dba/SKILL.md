@@ -99,6 +99,8 @@ If the user picks a specific snapshot, pass `--compare-to <path>` to the collect
 
 **If no snapshots exist**, skip this step silently — the collector will note it's the first snapshot in the report.
 
+**Daemon tip:** Also check if daemon samples exist in `./snapshots/samples/`. If they do, mention that daemon data was found and will be used for high-resolution graphs. If no daemon samples exist, tell the user: "For higher-resolution graphs, you can run the daemon separately in a background terminal: `python3 skills/mariadb-ai-dba/collect.py --daemon <same connection args>`". The daemon is not started by the skill — it must be run independently by the user.
+
 ## Step 2: Collect data
 
 Run the Python collector once to gather all data:

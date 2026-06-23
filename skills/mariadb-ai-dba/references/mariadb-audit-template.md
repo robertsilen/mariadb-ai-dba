@@ -7,7 +7,8 @@ This file defines the structure and quality bar for the `mariadb-audit.md` outpu
 - Keep all section headers even for paths that were not run — write "Data for this section was not collected." under those headers.
 - Replace `{placeholders}` with observed values. Remove placeholder text that does not apply.
 - Every abbreviation or technical term must be expanded on first use (per the Plain Language principle).
-- Present facts and measurements. Do not assign severity levels, suggest fixes, or make recommendations — except in the Security section, where severity and fix recommendations are always included.
+- Present facts and measurements. Do not assign severity levels, suggest fixes, or make recommendations — except in the Security section (severity and fix recommendations), the AI Suggestions subsection (directional guidance), and the Next Steps list (prioritized actions).
+- **Cross-section correlation:** When writing the report, look for causal relationships across sections and mention them inline. Examples: high CPU iowait (Section 2) caused by aggressive InnoDB flushing (Section 3); swap activity (Section 2) explaining query latency spikes (Section 5); high `Created_tmp_disk_tables` (Section 5) linked to specific query patterns in the digest analysis. One sentence connecting the sections is enough — don't repeat the full finding.
 
 **Δ (delta) columns:**
 - When the collector JSON contains a `deltas` section, tables in sections 3–5 and Appendix A include a **Δ** column showing the previous snapshot's value for comparison.
@@ -85,6 +86,17 @@ This subsection adapts based on the **purpose context** from Step 1:
 **If the user chose "General overview" (or no purpose was given):** Write 2–3 sentences highlighting the most notable aspects of this server's current state — the 2–3 things a DBA would look at first. For example: "This server's buffer pool is sized at only 0.4% of available RAM — section 3 has the details. The security audit found 2 critical findings that need attention in section 7."
 
 **Tone:** This is the ONE place in the report where the AI provides directional guidance. Keep it factual and grounded in the collected data — point to sections and numbers, don't make recommendations or prescribe fixes.
+
+### Next Steps
+
+End the Executive Summary with a prioritized numbered list of the most impactful actions. Order by urgency and impact — CRITICAL security findings first, then performance wins, then informational items. Each item should be one sentence referencing the relevant report section. Example:
+
+1. Fix 2 CRITICAL security findings — anonymous accounts and non-local root access (Section 7)
+2. Increase `innodb_buffer_pool_size` from 128M to 6G — currently using 0.4% of available RAM (Section 3)
+3. Add primary keys to 5 InnoDB tables to avoid hidden row IDs and improve replication (Section 6)
+4. Enable Performance Schema for query-level profiling (Section 5)
+
+Limit to 3–7 items. If the report has no significant findings, write "No urgent actions identified — this server is well-configured for its current workload."
 
 ### Snapshot Comparison
 
@@ -409,7 +421,27 @@ Present as a table with a Δ column when delta data is available. The Δ column 
 
 ---
 
-## Appendix B: Credits
+## Appendix B: Methodology
+
+The data in this report was collected using read-only SQL queries against the MariaDB server. The key queries used for each analysis area are listed below so that readers can re-run them independently or adapt them.
+
+List the most important queries used by the collector, grouped by report section. For each query, show the SQL and a one-line description of what it returns. Focus on the non-obvious queries — skip trivial ones like `SHOW GLOBAL STATUS`. Example format:
+
+**Schema Analysis — Tables without primary key:**
+```sql
+SELECT t.TABLE_SCHEMA, t.TABLE_NAME, t.ENGINE, t.TABLE_ROWS
+FROM information_schema.TABLES t
+LEFT JOIN information_schema.TABLE_CONSTRAINTS c
+  ON t.TABLE_SCHEMA = c.TABLE_SCHEMA AND t.TABLE_NAME = c.TABLE_NAME AND c.CONSTRAINT_TYPE = 'PRIMARY KEY'
+WHERE c.CONSTRAINT_NAME IS NULL AND t.TABLE_SCHEMA NOT IN ('mysql','information_schema','performance_schema','sys')
+  AND t.TABLE_TYPE = 'BASE TABLE';
+```
+
+Include queries for: tables without PK, non-optimal PKs, duplicate indexes, auto-increment fill, unused indexes, security checks (anonymous users, wildcard hosts, shared passwords, unused accounts), and any Performance Schema digest queries used.
+
+---
+
+## Appendix C: Credits
 
 MariaDB Foundation AI DBA Server Inventory created {YYYY-MM-DD} {HH:MM} {timezone}<br/>
 Auditor: Claude Code with [MariaDB AI DBA](https://github.com/mariadb/skills/tree/main/skills/mariadb-ai-dba) skill<br/>
