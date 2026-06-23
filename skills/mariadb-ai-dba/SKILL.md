@@ -92,8 +92,9 @@ Question: "Found {N} previous snapshots of this server. Compare against the late
 
 Options:
 1. **Yes, compare to latest** (Recommended) — include delta/trending data in the report
-2. **Choose a different snapshot** — list all available snapshots with timestamps
-3. **Skip comparison** — no delta data, fresh snapshot only
+2. **Compare to oldest** — compare against the earliest snapshot from {oldest_date} for maximum time span
+3. **Choose a different snapshot** — list all available snapshots with timestamps
+4. **Skip comparison** — no delta data, fresh snapshot only
 
 If the user picks a specific snapshot, pass `--compare-to <path>` to the collector.
 
