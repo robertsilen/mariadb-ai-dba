@@ -8,9 +8,10 @@ An AI-powered database administrator skill for Claude Code. Connects to a MariaD
 
 When activated, the AI DBA will:
 
-1. Ask how to connect (local socket, defaults file, or remote)
-2. Collect all diagnostic data in one pass — server overview, InnoDB health, connections, query performance, schema analysis, security audit, and MariaDB feature inventory
-3. Generate a timestamped server inventory (`mariadb-audit_{timestamp}.md` + `.html`) — the HTML version opens in a browser for easy sharing. Security findings include severity ratings and fix recommendations.
+1. Ask what brings you here — general overview or investigating a specific problem
+2. Ask how to connect (local socket, defaults file, or remote)
+3. Collect all diagnostic data in one pass — server overview, InnoDB health, connections, query performance, schema analysis, security audit, and MariaDB feature inventory
+4. Generate a timestamped HTML report (`mariadb-audit_{timestamp}.html`) that opens in the browser. Includes an Executive Summary with AI Suggestions tailored to your purpose, inline graphs, and security findings with severity ratings.
 
 If previous snapshots exist, the report includes **Δ columns** showing what changed since the last run — config drift, workload shifts, and gauge changes are highlighted inline.
 
@@ -94,4 +95,4 @@ For high-resolution time-series trending with graphs, run the collector as a dae
 python3 skills/mariadb-ai-dba/collect.py --daemon --interval 1 --socket /tmp/mysql.sock --snapshots-dir ./snapshots
 ```
 
-This samples MariaDB status counters and OS metrics (CPU, memory, swap, disk I/O) every second. The next audit run will include time-series graphs embedded inline in the HTML report — both MariaDB graphs (query throughput, buffer pool, checkpoint age, threads, I/O, read/write workload ratio) and OS correlation graphs (memory usage, swap, load average, CPU utilization, disk latency). Seeing MariaDB and OS metrics side by side reveals root causes: slow queries that coincide with swap activity or disk I/O spikes. Even without daemon data, graphs are generated from the snapshot history if multiple snapshots exist.
+This samples MariaDB status counters and OS metrics (CPU, memory, swap, disk I/O) every second. The next audit run will include time-series graphs embedded inline in the HTML report — MariaDB graphs (query throughput, statement mix, buffer pool, checkpoint age, history list length, threads, I/O, row operations, table locks, temp tables) and OS correlation graphs (memory usage, swap, load average, CPU utilization, disk latency). The workload read/write ratio is shown as an inline donut chart in the Executive Summary. Seeing MariaDB and OS metrics side by side reveals root causes: slow queries that coincide with swap activity or disk I/O spikes. Even without daemon data, graphs are generated from the snapshot history if multiple snapshots exist.
