@@ -423,21 +423,7 @@ Present as a table with a Δ column when delta data is available. The Δ column 
 
 ## Appendix B: Methodology
 
-The data in this report was collected using read-only SQL queries against the MariaDB server. The key queries used for each analysis area are listed below so that readers can re-run them independently or adapt them.
-
-List the most important queries used by the collector, grouped by report section. For each query, show the SQL and a one-line description of what it returns. Focus on the non-obvious queries — skip trivial ones like `SHOW GLOBAL STATUS`. Example format:
-
-**Schema Analysis — Tables without primary key:**
-```sql
-SELECT t.TABLE_SCHEMA, t.TABLE_NAME, t.ENGINE, t.TABLE_ROWS
-FROM information_schema.TABLES t
-LEFT JOIN information_schema.TABLE_CONSTRAINTS c
-  ON t.TABLE_SCHEMA = c.TABLE_SCHEMA AND t.TABLE_NAME = c.TABLE_NAME AND c.CONSTRAINT_TYPE = 'PRIMARY KEY'
-WHERE c.CONSTRAINT_NAME IS NULL AND t.TABLE_SCHEMA NOT IN ('mysql','information_schema','performance_schema','sys')
-  AND t.TABLE_TYPE = 'BASE TABLE';
-```
-
-Include queries for: tables without PK, non-optimal PKs, duplicate indexes, auto-increment fill, unused indexes, security checks (anonymous users, wildcard hosts, shared passwords, unused accounts), and any Performance Schema digest queries used.
+All data in this report was collected using read-only SQL queries (`SELECT` and `SHOW` statements only). The full query set is available in the collector source code: [`collect.py`](https://github.com/robertsilen/mariadb-ai-dba/blob/main/skills/mariadb-ai-dba/collect.py).
 
 ---
 

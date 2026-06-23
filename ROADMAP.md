@@ -165,7 +165,7 @@ All original top-10 items are **IMPLEMENTED**, plus 15 additional items beyond t
 | H1 | skip_name_resolve | **IMPLEMENTED** | LOW finding in security |
 | J1 | Prioritized "Next Steps" list | **IMPLEMENTED** | Numbered action list in Executive Summary |
 | J2 | Cross-section correlation | **IMPLEMENTED** | AI links findings across sections |
-| J4 | Reproducible methodology appendix | **IMPLEMENTED** | SQL queries in Appendix B |
+| J4 | Reproducible methodology appendix | **IMPLEMENTED** | Link to collect.py source in Appendix B |
 
 ---
 
@@ -284,7 +284,7 @@ The **Collection Type** column classifies what kind of data each analysis needs:
 | J1 | **Prioritized "Next Steps" action list** — end the Executive Summary with a numbered list of the most important actions, ordered by impact. Each item references the relevant report section | **N/A** (report structure) | Lefred expertise | **IMPLEMENTED** | Every consulting report has this. Gives the reader a clear starting point instead of requiring them to read the full report to find what matters most. |
 | J2 | **Cross-section correlation** — explicitly link findings across report sections when the AI detects known causal relationships (e.g., CPU iowait spikes caused by InnoDB flushing, swap activity explaining query latency, high tmp_disk_tables linked to specific query patterns) | **N/A** (AI analysis) | Lefred expertise | **IMPLEMENTED** | Consulting reports cross-reference sections to tell a coherent story. Without this, readers must connect the dots themselves across independent sections. |
 | J3 | **Annotated graphs with anomaly markers** — add statistical anomaly detection to time-series graphs (values > 2 standard deviations, sudden spikes) and draw markers/arrows highlighting specific events | **Trending** | Lefred expertise | CANDIDATE | Consulting reports annotate graphs with red arrows pointing to anomalies. Requires anomaly detection logic and matplotlib annotation code in graph.py. |
-| J4 | **Reproducible methodology appendix** — include the SQL queries used for each analysis in an appendix so readers can re-run them independently | **N/A** (report structure) | Lefred expertise | **IMPLEMENTED** | Consulting reports show inline SQL for transparency. Builds trust and enables readers to verify or extend the analysis. |
+| J4 | **Reproducible methodology appendix** — link to the collector source code so readers can inspect and re-run the exact SQL queries used | **N/A** (report structure) | Lefred expertise | **IMPLEMENTED** | Consulting reports show methodology for transparency. Linking to the source avoids sync issues and is always accurate. |
 
 ### Category K: Scope Expansions
 
