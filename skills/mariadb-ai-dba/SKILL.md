@@ -110,9 +110,11 @@ If the Python collector is unavailable, fall back to the heredoc approach in the
 
 When writing the HTML report, place these comment markers where graphs should appear:
 
+- `<!-- GRAPHS:workload -->` — in the Workload Profile subsection of the Executive Summary
 - `<!-- GRAPHS:innodb -->` — after the Checkpoint Health table, before Connections (section 4)
 - `<!-- GRAPHS:connections -->` — after the Connections table, before Query Performance (section 5)
 - `<!-- GRAPHS:performance -->` — immediately after the Global Counters table, **before** Slow Query Log Configuration
+- `<!-- GRAPHS:os -->` — after Server Identity & Environment (section 2), before InnoDB (section 3)
 
 After writing the HTML file, run:
 

@@ -38,6 +38,12 @@ One or two paragraphs in plain language:
 - Key observations — notable facts about the server's current state, without value judgments
 - If the security path was run, note the number of security findings by severity
 
+### Workload Profile
+
+Show the read/write statement mix computed from `Com_select` (reads) vs `Com_insert` + `Com_update` + `Com_delete` + `Com_replace` (writes).
+
+Place the `<!-- GRAPHS:workload -->` marker here. The graph injection script will insert a pie chart showing the read/write ratio. In the **.md report**, show the percentages as plain text: e.g. "**Reads: 82%** / **Writes: 18%**".
+
 ### Overview
 
 | Area | Observation |
@@ -80,6 +86,8 @@ The foundation of this inventory. Version, hardware, and uptime provide context 
 | CPU | {model, core count} |
 | RAM | {total} |
 | Disk (datadir) | {used} / {total} ({percent}% used, {free} free) |
+
+`<!-- GRAPHS:os -->` (OS metric graphs — memory, swap, load, CPU, disk I/O — injected here if daemon data exists)
 
 ---
 
@@ -267,6 +275,7 @@ Present findings in a single table — no summary cards or colored boxes above i
 - Non-root users with admin privileges (SUPER, SHUTDOWN, RELOAD, PROCESS, FILE) — MEDIUM
 - SSL/TLS (Secure Sockets Layer / Transport Layer Security) disabled — MEDIUM
 - `require_secure_transport` OFF — MEDIUM
+- Unused accounts — accounts that exist but have never connected (requires Performance Schema; data in `security.unused_accounts`) — LOW
 - `local_infile` ON — LOW
 - Test database present — LOW
 - Password validation plugin not installed — LOW

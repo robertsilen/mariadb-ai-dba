@@ -118,6 +118,7 @@ Use these severity levels in the Security Findings table in the report:
 - **HIGH:** Non-root accounts with ALL PRIVILEGES at global level
 - **MEDIUM:** Accounts sharing identical passwords, non-root accounts with admin privileges (SUPER, SHUTDOWN, etc.)
 - **MEDIUM:** SSL/TLS disabled (have_ssl = DISABLED), require_secure_transport = OFF
+- **LOW:** Unused accounts (granted access but never connected — requires Performance Schema)
 - **LOW:** local_infile = ON, test database present, password validation plugin not installed
 - **LOW:** PUBLIC role grants on test or user databases, skip_name_resolve = OFF
 
@@ -132,3 +133,4 @@ Present findings as a compact table: `| # | Severity | Finding |`. If any CRITIC
 - **mysql.user:** All queries use `mysql.user` which is available across all MariaDB versions and exposes plugin, ssl_type, and authentication_string columns directly.
 - **require_secure_transport:** May not exist in MariaDB versions before 10.5. If the query fails, note it as unavailable rather than as a finding.
 - **Password validation:** MariaDB has `simple_password_check` and `cracklib_password_check` plugins. Neither is installed by default.
+- **Unused accounts:** The collector queries `performance_schema.accounts` (when PS is enabled) joined against `mysql.user` to find accounts that have been granted access but never connected since the last server restart. Data is in `security.unused_accounts` (null if PS is disabled). Stale accounts are an attack surface — they accumulate as people leave or applications are decommissioned.

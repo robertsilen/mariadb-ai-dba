@@ -3,7 +3,7 @@
 
 Two modes:
   --snapshot   One-shot full collection (server, schema, security, features, perf, status)
-  --daemon     Continuous GLOBAL_STATUS sampling for time-series trending
+  --daemon     Continuous GLOBAL_STATUS + OS metrics sampling for time-series trending
 
 Output: JSON to stdout (snapshot) or JSONL files in snapshots/samples/ (daemon).
 """
@@ -602,6 +602,22 @@ def collect_security(cur):
         WHERE GRANTEE LIKE '''PUBLIC''%'
     """)
 
+    ps_enabled = query_global(cur, "performance_schema")
+    if str(ps_enabled) in ("ON", "1"):
+        data["unused_accounts"] = query(cur, """
+            SELECT u.user, u.host
+            FROM mysql.user u
+            LEFT JOIN performance_schema.accounts a
+                ON u.user = a.user AND u.host = a.host
+            WHERE (u.is_role = 'N' OR u.is_role = '' OR u.is_role IS NULL)
+              AND u.user != ''
+              AND u.user NOT IN ('mariadb.sys', 'PUBLIC')
+              AND (a.user IS NULL OR a.total_connections = 0)
+            ORDER BY u.user, u.host
+        """)
+    else:
+        data["unused_accounts"] = None
+
     return data
 
 
@@ -1129,6 +1145,141 @@ DAEMON_VARS = [
 DAEMON_VARS_SQL = "(" + ",".join(f"'{v}'" for v in DAEMON_VARS) + ")"
 
 
+def sample_os_metrics():
+    """Collect lightweight OS metrics for daemon samples. Fast — no subprocesses."""
+    metrics = {}
+    system = platform.system()
+
+    if system == "Linux":
+        # CPU usage from /proc/stat (raw jiffies — compute rate in graph.py)
+        try:
+            with open("/proc/stat") as f:
+                line = f.readline()  # "cpu  user nice system idle iowait irq softirq ..."
+                parts = line.split()
+                if parts[0] == "cpu":
+                    vals = [int(x) for x in parts[1:]]
+                    metrics["os_cpu_user"] = vals[0]
+                    metrics["os_cpu_nice"] = vals[1]
+                    metrics["os_cpu_system"] = vals[2]
+                    metrics["os_cpu_idle"] = vals[3]
+                    metrics["os_cpu_iowait"] = vals[4] if len(vals) > 4 else 0
+        except Exception:
+            pass
+
+        # Memory from /proc/meminfo
+        try:
+            mem = {}
+            with open("/proc/meminfo") as f:
+                for line in f:
+                    parts = line.split()
+                    if parts[0].rstrip(":") in ("MemTotal", "MemAvailable", "MemFree",
+                                                  "Buffers", "Cached", "SwapTotal", "SwapFree"):
+                        mem[parts[0].rstrip(":")] = int(parts[1]) * 1024  # kB to bytes
+            metrics["os_mem_total"] = mem.get("MemTotal", 0)
+            metrics["os_mem_available"] = mem.get("MemAvailable", mem.get("MemFree", 0))
+            metrics["os_swap_total"] = mem.get("SwapTotal", 0)
+            metrics["os_swap_used"] = mem.get("SwapTotal", 0) - mem.get("SwapFree", 0)
+        except Exception:
+            pass
+
+        # Load average
+        try:
+            with open("/proc/loadavg") as f:
+                parts = f.read().split()
+                metrics["os_load_1m"] = float(parts[0])
+                metrics["os_load_5m"] = float(parts[1])
+                metrics["os_load_15m"] = float(parts[2])
+        except Exception:
+            pass
+
+        # Disk I/O from /proc/diskstats (cumulative — compute rates in graph.py)
+        # Fields: reads_completed, read_ms, writes_completed, write_ms
+        # We pick the device with most I/O (typically sda, nvme0n1, vda)
+        try:
+            best = None
+            with open("/proc/diskstats") as f:
+                for line in f:
+                    parts = line.split()
+                    if len(parts) < 14:
+                        continue
+                    dev = parts[2]
+                    # Skip partitions (sda1, nvme0n1p1) and loop/ram devices
+                    if any(c.isdigit() for c in dev.lstrip("nvme").split("n")[-1].lstrip("0123456789")):
+                        if not dev.startswith("nvme") or "p" in dev:
+                            continue
+                    if dev.startswith(("loop", "ram", "dm-")):
+                        continue
+                    reads = int(parts[3])
+                    writes = int(parts[7])
+                    total = reads + writes
+                    if best is None or total > best[1]:
+                        best = (dev, total, parts)
+            if best:
+                dev, _, parts = best
+                metrics["os_disk_dev"] = dev
+                metrics["os_disk_reads"] = int(parts[3])
+                metrics["os_disk_read_ms"] = int(parts[6])
+                metrics["os_disk_writes"] = int(parts[7])
+                metrics["os_disk_write_ms"] = int(parts[10])
+                metrics["os_disk_io_ms"] = int(parts[12])
+        except Exception:
+            pass
+
+    elif system == "Darwin":
+        # macOS: use host_statistics via sysctl for memory
+        try:
+            import resource
+            page_size = resource.getpagesize()
+            vm = subprocess.check_output(["vm_stat"], text=True, timeout=2)
+            vm_data = {}
+            for line in vm.strip().split("\n")[1:]:
+                if ":" in line:
+                    key, val = line.split(":", 1)
+                    val = val.strip().rstrip(".")
+                    try:
+                        vm_data[key.strip()] = int(val)
+                    except ValueError:
+                        pass
+            free = vm_data.get("Pages free", 0)
+            active = vm_data.get("Pages active", 0)
+            inactive = vm_data.get("Pages inactive", 0)
+            speculative = vm_data.get("Pages speculative", 0)
+            wired = vm_data.get("Pages wired down", 0)
+            compressed = vm_data.get("Pages occupied by compressor", 0)
+            total_pages = free + active + inactive + speculative + wired + compressed
+            metrics["os_mem_total"] = total_pages * page_size
+            metrics["os_mem_available"] = (free + inactive) * page_size
+            metrics["os_swap_total"] = 0
+            metrics["os_swap_used"] = 0
+            # macOS dynamic swap — check sysctl
+            try:
+                swap_info = subprocess.check_output(
+                    ["sysctl", "-n", "vm.swapusage"], text=True, timeout=2).strip()
+                # "total = 0.00M  used = 0.00M  free = 0.00M"
+                for part in swap_info.split("  "):
+                    k, v = part.strip().split(" = ")
+                    val_mb = float(v.rstrip("M"))
+                    if k == "total":
+                        metrics["os_swap_total"] = int(val_mb * 1024 * 1024)
+                    elif k == "used":
+                        metrics["os_swap_used"] = int(val_mb * 1024 * 1024)
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+        # Load average
+        try:
+            load = os.getloadavg()
+            metrics["os_load_1m"] = round(load[0], 2)
+            metrics["os_load_5m"] = round(load[1], 2)
+            metrics["os_load_15m"] = round(load[2], 2)
+        except Exception:
+            pass
+
+    return metrics
+
+
 def run_daemon(conn, args):
     cur = conn.cursor()
     interval = args.interval
@@ -1186,6 +1337,9 @@ def run_daemon(conn, args):
                 cur = conn.cursor()
             except Exception:
                 pass
+
+        # Collect OS metrics
+        sample.update(sample_os_metrics())
 
         current_file.write(json.dumps(sample, separators=(",", ":")))
         current_file.write("\n")

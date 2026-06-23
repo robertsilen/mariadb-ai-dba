@@ -242,12 +242,121 @@ GRAPH_DEFS = [
         "labels": ["Immediate (granted)", "Waited"],
         "ylabel": "locks/sec",
     },
+    # --- Workload profile ---
+    {
+        "id": "workload_ratio",
+        "title": "Read / Write Ratio",
+        "section": "workload",
+        "type": "pie",
+        "read_vars": ["COM_SELECT"],
+        "write_vars": ["COM_INSERT", "COM_UPDATE", "COM_DELETE", "COM_REPLACE"],
+    },
+    # --- OS metrics ---
+    {
+        "id": "os_memory",
+        "title": "Memory Usage",
+        "section": "os",
+        "type": "computed",
+        "compute": "os_memory_pct",
+        "ylabel": "% of total RAM",
+    },
+    {
+        "id": "os_swap",
+        "title": "Swap Usage",
+        "section": "os",
+        "type": "gauge",
+        "vars": ["os_swap_used"],
+        "labels": ["Swap used"],
+        "ylabel": "MB",
+        "scale": 1 / (1024 * 1024),
+    },
+    {
+        "id": "os_load",
+        "title": "System Load Average",
+        "section": "os",
+        "type": "gauge",
+        "vars": ["os_load_1m", "os_load_5m"],
+        "labels": ["1-min load", "5-min load"],
+        "ylabel": "load",
+    },
+    {
+        "id": "os_cpu",
+        "title": "CPU Usage",
+        "section": "os",
+        "type": "computed",
+        "compute": "os_cpu_pct",
+        "ylabel": "% CPU",
+    },
+    {
+        "id": "os_disk_latency",
+        "title": "Disk I/O Latency",
+        "section": "os",
+        "type": "computed",
+        "compute": "os_disk_latency",
+        "ylabel": "ms per I/O",
+    },
 ]
 
 
 # ---------------------------------------------------------------------------
 # Rendering
 # ---------------------------------------------------------------------------
+
+def _render_pie(graph_def, samples, fig_width=5, fig_height=3):
+    """Render a read/write ratio pie chart from first+last samples."""
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+    except ImportError:
+        return None
+
+    sns.set_theme(style="whitegrid", palette="muted", font_scale=0.9)
+
+    first, last = samples[0], samples[-1]
+
+    def sum_vars(sample, var_list):
+        return sum(safe_int(sample.get(v, 0)) for v in var_list)
+
+    reads_total = sum_vars(last, graph_def["read_vars"]) - sum_vars(first, graph_def["read_vars"])
+    writes_total = sum_vars(last, graph_def["write_vars"]) - sum_vars(first, graph_def["write_vars"])
+
+    # Fall back to absolute values if delta is zero (single snapshot)
+    if reads_total + writes_total == 0:
+        reads_total = sum_vars(last, graph_def["read_vars"])
+        writes_total = sum_vars(last, graph_def["write_vars"])
+
+    if reads_total + writes_total == 0:
+        return None
+
+    total = reads_total + writes_total
+    read_pct = reads_total / total * 100
+    write_pct = writes_total / total * 100
+
+    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+    colors = ["#4a90d9", "#d97a4a"]
+    wedges, texts, autotexts = ax.pie(
+        [reads_total, writes_total],
+        labels=[f"Reads ({read_pct:.0f}%)", f"Writes ({write_pct:.0f}%)"],
+        colors=colors,
+        autopct="",
+        startangle=90,
+        wedgeprops={"linewidth": 1, "edgecolor": "white"},
+    )
+    for t in texts:
+        t.set_fontsize(10)
+    ax.set_title(graph_def["title"], fontsize=11, fontweight="bold", pad=10)
+
+    plt.tight_layout()
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", bbox_inches="tight", dpi=150)
+    plt.close(fig)
+
+    png_bytes = buf.getvalue()
+    return base64.b64encode(png_bytes).decode("ascii")
+
 
 def render_graph(graph_def, samples, fig_width=10, fig_height=3.5):
     """Render a single graph and return base64-encoded PNG string."""
@@ -264,6 +373,10 @@ def render_graph(graph_def, samples, fig_width=10, fig_height=3.5):
 
     graph_type = graph_def["type"]
 
+    # Pie charts are rendered separately — not time-series
+    if graph_type == "pie":
+        return _render_pie(graph_def, samples, fig_width=5, fig_height=3)
+
     if graph_type == "rate":
         series = compute_rates(samples, graph_def["vars"])
     elif graph_type == "gauge":
@@ -275,6 +388,46 @@ def render_graph(graph_def, samples, fig_width=10, fig_height=3.5):
             max_age = safe_int(s.get("INNODB_CHECKPOINT_MAX_AGE", 1))
             if max_age > 0:
                 series.append({"ts": s["ts"], "pct": (age / max_age) * 100})
+    elif graph_type == "computed" and graph_def.get("compute") == "os_memory_pct":
+        series = []
+        for s in samples:
+            total = safe_int(s.get("os_mem_total", 0))
+            avail = safe_int(s.get("os_mem_available", 0))
+            if total > 0:
+                used_pct = ((total - avail) / total) * 100
+                series.append({"ts": s["ts"], "pct": used_pct})
+    elif graph_type == "computed" and graph_def.get("compute") == "os_cpu_pct":
+        series = []
+        for i in range(1, len(samples)):
+            prev, cur = samples[i-1], samples[i]
+            dt = cur["ts"] - prev["ts"]
+            if dt <= 0:
+                continue
+            p_total = sum(safe_int(prev.get(k, 0)) for k in
+                          ("os_cpu_user", "os_cpu_nice", "os_cpu_system",
+                           "os_cpu_idle", "os_cpu_iowait"))
+            c_total = sum(safe_int(cur.get(k, 0)) for k in
+                          ("os_cpu_user", "os_cpu_nice", "os_cpu_system",
+                           "os_cpu_idle", "os_cpu_iowait"))
+            d_total = c_total - p_total
+            if d_total <= 0:
+                continue
+            d_idle = safe_int(cur.get("os_cpu_idle", 0)) - safe_int(prev.get("os_cpu_idle", 0))
+            d_iowait = safe_int(cur.get("os_cpu_iowait", 0)) - safe_int(prev.get("os_cpu_iowait", 0))
+            cpu_pct = ((d_total - d_idle) / d_total) * 100
+            iowait_pct = (d_iowait / d_total) * 100
+            series.append({"ts": cur["ts"], "cpu": cpu_pct, "iowait": iowait_pct})
+    elif graph_type == "computed" and graph_def.get("compute") == "os_disk_latency":
+        series = []
+        for i in range(1, len(samples)):
+            prev, cur = samples[i-1], samples[i]
+            d_reads = safe_int(cur.get("os_disk_reads", 0)) - safe_int(prev.get("os_disk_reads", 0))
+            d_writes = safe_int(cur.get("os_disk_writes", 0)) - safe_int(prev.get("os_disk_writes", 0))
+            d_read_ms = safe_int(cur.get("os_disk_read_ms", 0)) - safe_int(prev.get("os_disk_read_ms", 0))
+            d_write_ms = safe_int(cur.get("os_disk_write_ms", 0)) - safe_int(prev.get("os_disk_write_ms", 0))
+            read_lat = (d_read_ms / d_reads) if d_reads > 0 else 0
+            write_lat = (d_write_ms / d_writes) if d_writes > 0 else 0
+            series.append({"ts": cur["ts"], "read_lat": read_lat, "write_lat": write_lat})
     else:
         return None
 
@@ -282,6 +435,7 @@ def render_graph(graph_def, samples, fig_width=10, fig_height=3.5):
         return None
 
     # Skip graphs where all data values are effectively zero
+    compute = graph_def.get("compute", "")
     if graph_type in ("rate", "gauge"):
         all_max = 0
         for var in graph_def["vars"]:
@@ -289,9 +443,19 @@ def render_graph(graph_def, samples, fig_width=10, fig_height=3.5):
             all_max = max(all_max, var_max)
         if all_max < 0.1:
             return None
-    elif graph_type == "computed" and graph_def.get("compute") == "checkpoint_pct":
-        if max(s.get("pct", 0) for s in series) < 0.01:
-            return None
+    elif graph_type == "computed":
+        if compute == "checkpoint_pct":
+            if max(s.get("pct", 0) for s in series) < 0.01:
+                return None
+        elif compute == "os_memory_pct":
+            if max(s.get("pct", 0) for s in series) < 0.01:
+                return None
+        elif compute == "os_cpu_pct":
+            if max(s.get("cpu", 0) for s in series) < 0.1:
+                return None
+        elif compute == "os_disk_latency":
+            if max(max(s.get("read_lat", 0), s.get("write_lat", 0)) for s in series) < 0.01:
+                return None
 
     # Insert NaN at gaps (>3x median interval) to break lines
     import math
@@ -314,21 +478,43 @@ def render_graph(graph_def, samples, fig_width=10, fig_height=3.5):
 
     fig, ax = plt.subplots(figsize=(fig_width, fig_height))
 
-    if graph_type == "computed" and graph_def.get("compute") == "checkpoint_pct":
+    if graph_type == "computed" and compute == "checkpoint_pct":
         values = [s["pct"] for s in series]
         ax.fill_between(timestamps, values, alpha=0.3)
         ax.plot(timestamps, values, linewidth=1.5)
         ax.set_ylim(0, max(max(v for v in values if not math.isnan(v)) * 1.1, 10))
+    elif graph_type == "computed" and compute == "os_memory_pct":
+        values = [s["pct"] for s in series]
+        ax.fill_between(timestamps, values, alpha=0.3, color="#d97a4a")
+        ax.plot(timestamps, values, linewidth=1.5, color="#d97a4a")
+        ax.set_ylim(0, 100)
+    elif graph_type == "computed" and compute == "os_cpu_pct":
+        cpu_vals = [s.get("cpu", 0) for s in series]
+        iowait_vals = [s.get("iowait", 0) for s in series]
+        ax.fill_between(timestamps, iowait_vals, alpha=0.4, label="I/O wait", color="#c05050")
+        ax.fill_between(timestamps, cpu_vals, alpha=0.3, label="CPU", color="#4a90d9")
+        ax.plot(timestamps, cpu_vals, linewidth=1.5, color="#4a90d9")
+        ax.plot(timestamps, iowait_vals, linewidth=1, color="#c05050", linestyle="--")
+        ax.legend(loc="upper left", fontsize=8, framealpha=0.9)
+        ax.set_ylim(0, 100)
+    elif graph_type == "computed" and compute == "os_disk_latency":
+        read_vals = [s.get("read_lat", 0) for s in series]
+        write_vals = [s.get("write_lat", 0) for s in series]
+        ax.plot(timestamps, read_vals, label="Read latency", linewidth=1.5, color="#4a90d9")
+        ax.plot(timestamps, write_vals, label="Write latency", linewidth=1.5, color="#d97a4a")
+        ax.legend(loc="upper left", fontsize=8, framealpha=0.9)
     elif graph_def.get("stacked"):
+        scale = graph_def.get("scale", 1)
         all_series = {}
         for var, label in zip(graph_def["vars"], graph_def["labels"]):
-            all_series[label] = [s.get(var, 0) for s in series]
+            all_series[label] = [s.get(var, 0) * scale for s in series]
         ax.stackplot(timestamps, *all_series.values(),
                      labels=all_series.keys(), alpha=0.7)
         ax.legend(loc="upper left", fontsize=8, framealpha=0.9)
     else:
+        scale = graph_def.get("scale", 1)
         for var, label in zip(graph_def["vars"], graph_def["labels"]):
-            values = [s.get(var, 0) for s in series]
+            values = [s.get(var, 0) * scale for s in series]
             ax.plot(timestamps, values, label=label, linewidth=1.5)
         if len(graph_def["vars"]) > 1:
             ax.legend(loc="upper left", fontsize=8, framealpha=0.9)

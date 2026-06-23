@@ -94,4 +94,4 @@ For high-resolution time-series trending with graphs, run the collector as a dae
 python3 skills/mariadb-ai-dba/collect.py --daemon --interval 1 --socket /tmp/mysql.sock --snapshots-dir ./snapshots
 ```
 
-This samples GLOBAL_STATUS every second. The next audit run will include time-series graphs (query throughput, buffer pool, checkpoint age, threads, I/O, and more) embedded inline in the HTML report. Even without daemon data, graphs are generated from the snapshot history if multiple snapshots exist.
+This samples MariaDB status counters and OS metrics (CPU, memory, swap, disk I/O) every second. The next audit run will include time-series graphs embedded inline in the HTML report — both MariaDB graphs (query throughput, buffer pool, checkpoint age, threads, I/O, read/write workload ratio) and OS correlation graphs (memory usage, swap, load average, CPU utilization, disk latency). Seeing MariaDB and OS metrics side by side reveals root causes: slow queries that coincide with swap activity or disk I/O spikes. Even without daemon data, graphs are generated from the snapshot history if multiple snapshots exist.
