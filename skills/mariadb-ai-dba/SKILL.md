@@ -39,7 +39,7 @@ Ask the user **two questions** using `AskUserQuestion` before data collection be
 
 Header: "Purpose"
 
-Question: "What brings you here today?"
+Question: "What brings you to MariaDB AI DBA today?"
 
 Options:
 1. **General overview** (Recommended) — comprehensive server audit
