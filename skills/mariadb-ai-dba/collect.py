@@ -5,13 +5,15 @@ Two modes:
   --snapshot   One-shot full collection (server, schema, security, features, perf, status)
   --daemon     Continuous GLOBAL_STATUS + OS metrics sampling for time-series trending
 
-Output: JSON to stdout (snapshot) or JSONL files in snapshots/samples/ (daemon).
+Output: JSON to stdout (snapshot) or gzipped JSONL files in snapshots/samples/ (daemon).
 """
 
 import argparse
+import gzip
 import json
 import os
 import platform
+import shutil
 import signal
 import subprocess
 import sys
@@ -1280,6 +1282,21 @@ def sample_os_metrics():
     return metrics
 
 
+def check_disk_space(path, min_free_mb=500, min_free_pct=5):
+    """Return True if disk has enough free space, False otherwise."""
+    try:
+        usage = shutil.disk_usage(path)
+        free_mb = usage.free / (1024 * 1024)
+        free_pct = (usage.free / usage.total) * 100
+        if free_mb < min_free_mb or free_pct < min_free_pct:
+            print(f"WARNING: Low disk space — {free_mb:.0f} MB free ({free_pct:.1f}%). "
+                  f"Minimum: {min_free_mb} MB or {min_free_pct}%.", file=sys.stderr)
+            return False
+        return True
+    except Exception:
+        return True
+
+
 def run_daemon(conn, args):
     cur = conn.cursor()
     interval = args.interval
@@ -1287,6 +1304,10 @@ def run_daemon(conn, args):
     samples_dir = snap_dir / "samples"
     samples_dir.mkdir(parents=True, exist_ok=True)
     retention_days = args.retention_days
+
+    if not check_disk_space(samples_dir):
+        print("ERROR: Not enough disk space to start daemon. Exiting.", file=sys.stderr)
+        return
 
     running = True
 
@@ -1302,6 +1323,7 @@ def run_daemon(conn, args):
 
     current_hour = None
     current_file = None
+    sample_count = 0
 
     while running:
         ts = time.time()
@@ -1312,12 +1334,18 @@ def run_daemon(conn, args):
             if current_file:
                 current_file.close()
             current_hour = hour_key
-            filepath = samples_dir / f"samples_{hour_key}.jsonl"
-            current_file = open(filepath, "a")
+            filepath = samples_dir / f"samples_{hour_key}.jsonl.gz"
+            current_file = gzip.open(filepath, "at", compresslevel=6)
 
             # Prune old files
             if retention_days > 0:
                 prune_old_samples(samples_dir, retention_days)
+
+        # Check disk space every 60 samples
+        sample_count += 1
+        if sample_count % 60 == 0 and not check_disk_space(samples_dir):
+            print("Stopping daemon due to low disk space.", file=sys.stderr)
+            break
 
         # Collect status
         sample = {"ts": int(ts)}
@@ -1359,12 +1387,13 @@ def run_daemon(conn, args):
 
 def prune_old_samples(samples_dir, retention_days):
     cutoff = time.time() - retention_days * 86400
-    for f in samples_dir.glob("samples_*.jsonl"):
-        try:
-            if f.stat().st_mtime < cutoff:
-                f.unlink()
-        except Exception:
-            pass
+    for pattern in ("samples_*.jsonl", "samples_*.jsonl.gz"):
+        for f in samples_dir.glob(pattern):
+            try:
+                if f.stat().st_mtime < cutoff:
+                    f.unlink()
+            except Exception:
+                pass
 
 
 # ---------------------------------------------------------------------------

@@ -87,7 +87,7 @@ A single Python script using the official `mariadb` connector module. Connects o
 | Mode | Command | What it does | Output |
 |---|---|---|---|
 | **Snapshot** | `--snapshot` | Full one-shot collection of all sections | Single JSON file in `snapshots/` |
-| **Daemon** | `--daemon --interval N` | Continuous lightweight sampling of STATUS counters + OS metrics every N seconds | JSONL files in `snapshots/samples/` (one file per hour) |
+| **Daemon** | `--daemon --interval N` | Continuous lightweight sampling of STATUS counters + OS metrics every N seconds | Gzipped JSONL files in `snapshots/samples/` (one file per hour, ~10x smaller than uncompressed) |
 
 The daemon is run independently by the user in a background terminal session — it is not started by the skill. It provides high-resolution time-series data that the skill's graph generator uses automatically if available. Without daemon data, graphs fall back to snapshot history (lower resolution, only one data point per audit run).
 
@@ -166,6 +166,8 @@ All original top-10 items are **IMPLEMENTED**, plus 15 additional items beyond t
 | J1 | Prioritized "Next Steps" list | **IMPLEMENTED** | Numbered action list in Executive Summary |
 | J2 | Cross-section correlation | **IMPLEMENTED** | AI links findings across sections |
 | J4 | Reproducible methodology appendix | **IMPLEMENTED** | Link to collect.py source in Appendix B |
+| L1 | Gzip compression for daemon samples | **IMPLEMENTED** | Writes `.jsonl.gz`, ~10x smaller |
+| L2 | Disk space monitoring in daemon | **IMPLEMENTED** | Checks free space, stops if below threshold |
 
 ---
 
@@ -293,3 +295,13 @@ The **Collection Type** column classifies what kind of data each analysis needs:
 | K1 | **Multi-server comparative view** — accept multiple connection targets, run the collector on each, and produce a summary table comparing key metrics across servers. Highlights asymmetries and outliers | **Snapshot** (per server) | Lefred expertise | CANDIDATE | Consulting reports covering multiple servers include comparison tables. Reveals fleet-wide patterns and outlier servers. Significant architecture change — the skill currently assumes a single server. |
 | K2 | **Backup & recovery assessment** — check binary log retention settings, `SHOW BINARY LOGS` for log retention, detect presence of backup-related tables or plugins. Document backup configuration without verifying execution | **Config** + **Snapshot** | Lefred expertise | CANDIDATE | Every consulting report includes a backup section. Limited by what's detectable from SQL (backups are usually external processes), but retention settings and binary log state are valuable. |
 | K3 | **Architecture & scalability advisory** — based on observed workload ratio, dataset size, replication topology, and server resources, provide high-level observations about scaling patterns (read replicas, sharding, proxy routing) | **N/A** (AI analysis of collected data) | Lefred expertise | CANDIDATE | Consulting reports include architecture sections. Subjective and advisory, but the data to support observations is already collected. |
+| K4 | **External monitoring integration** — optionally pull trending data from existing monitoring solutions (Prometheus/Grafana API, PMM, Zabbix) instead of or alongside the built-in daemon. Advanced users already have monitoring in place; querying their existing data avoids duplicate collection and provides longer history | **Trending** | Lefred feedback | CANDIDATE | For advanced users with existing monitoring stacks, collecting our own samples is redundant. Integrating with their monitoring API gives access to weeks/months of history. Significant scope — each monitoring system has a different API. |
+
+### Category L: Daemon & Collection Infrastructure
+
+| # | Analysis Path | Collection Type | Source | Decision | Rationale |
+|---|---|---|---|---|---|
+| L1 | **Gzip compression for daemon samples** — write `.jsonl.gz` instead of `.jsonl` to reduce disk usage ~10x. At 1-second intervals, uncompressed JSONL uses ~156 MB/day; gzip reduces this to ~15-20 MB/day | **Trending** | Lefred feedback | **IMPLEMENTED** | Lefred flagged JSONL file sizes. The Percona collection scripts gzip on-the-fly (`\| gzip >> file.gz`). Python's `gzip.open()` provides the same with minimal code change. |
+| L2 | **Disk space monitoring during daemon collection** — check free disk space before starting and periodically during collection, stop gracefully if below threshold | **Trending** | Lefred feedback | **IMPLEMENTED** | The Percona `check_disk_space()` function checks `df` output and aborts if below minimum free bytes or free percent. Essential for long-running daemon on production servers. |
+| L3 | **CSV output format option** — optionally write daemon samples as compressed CSV instead of JSONL. CSV is ~30-40% smaller per line (no repeated key names) and universally parseable by spreadsheet tools | **Trending** | Lefred feedback | CANDIDATE | Lefred uses compressed CSV in his collection scripts. JSONL is more robust for evolving schemas (adding fields doesn't break readers), so it remains the default. CSV would be an optional alternative. |
+| L4 | **Parallel query collection** — run independent SQL queries concurrently using ThreadPoolExecutor during snapshot collection. Currently queries run sequentially | **Snapshot** | [mysql-awesome-stats-collector](https://github.com/k4kratik/mysql-awesome-stats-collector) | CANDIDATE | Snapshot collection is already fast (~2-3s), so the benefit is marginal for single-server. Becomes more relevant for K1 (multi-server) where multiple servers could be collected in parallel. |

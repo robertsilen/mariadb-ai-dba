@@ -38,14 +38,17 @@ def safe_float(v):
 # ---------------------------------------------------------------------------
 
 def load_daemon_samples(samples_dir):
-    """Load JSONL daemon sample files, return sorted list of dicts."""
+    """Load JSONL daemon sample files (.jsonl and .jsonl.gz), return sorted list of dicts."""
+    import gzip as _gzip
     samples_dir = Path(samples_dir)
     if not samples_dir.exists():
         return []
 
     samples = []
-    for f in sorted(samples_dir.glob("samples_*.jsonl")):
-        with open(f) as fh:
+    files = sorted(set(samples_dir.glob("samples_*.jsonl")) | set(samples_dir.glob("samples_*.jsonl.gz")))
+    for f in files:
+        opener = _gzip.open if f.suffix == ".gz" else open
+        with opener(f, "rt") as fh:
             for line in fh:
                 line = line.strip()
                 if not line:
