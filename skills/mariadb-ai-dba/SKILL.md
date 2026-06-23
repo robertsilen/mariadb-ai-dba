@@ -187,15 +187,14 @@ Use the `security` section from the collector JSON. Reference `references/securi
 After data collection:
 
 1. Get the timestamp via `date +%Y-%m-%d_%H-%M` (Bash) for the filename, and `date +"%Y-%m-%d at %H:%M %Z"` for the human-readable date shown in the report header and credits. Use the user's local time and timezone.
-2. Read `references/mariadb-audit-template.md`
-3. Write the report to `mariadb-audit_{timestamp}.md` in the current directory using the Write tool
-4. Fill in each template section with observed data.
+2. Read `references/mariadb-audit-template.md` for the report structure and quality bar.
+3. Read `references/mariadb-audit-template.html` for the HTML skeleton with all styling.
+4. Write `mariadb-audit_{timestamp}.html` by replacing the body comment with the report content as HTML. Use the CSS classes defined in the template (`.badge .critical/.high/.medium/.low`, `.finding`, `.note`, `.section-intro`, `pre`, `code`). Do not regenerate or modify the `<style>` block.
 5. **Keep all template section headers.** Every section header in the template that has an explanation paragraph below it must have that same explanation reproduced verbatim in the report — do not paraphrase, shorten, or replace it with your own text.
-6. Add any additional findings discovered beyond the template's structure
-7. Always include the **Executive Summary** (section 1) to tie everything together
-8. Read `references/mariadb-audit-template.html` for the HTML skeleton with all styling. Write `mariadb-audit_{timestamp}.html` by replacing the body comment with the report content as HTML. The HTML must contain the same content as the .md — including every section explanation paragraph under each header. Use the CSS classes defined in the template (`.badge .critical/.high/.medium/.low`, `.finding`, `.note`, `.section-intro`, `pre`, `code`). Do not regenerate or modify the `<style>` block.
-9. Open the HTML file in the default browser: `open mariadb-audit_{timestamp}.html` (macOS), `xdg-open` (Linux), or `start` (Windows)
-10. Confirm both filenames (.md and .html) to the user
+6. Fill in each template section with observed data. Add any additional findings discovered beyond the template's structure.
+7. Always include the **Executive Summary** (section 1) to tie everything together.
+8. Open the HTML file in the default browser: `open mariadb-audit_{timestamp}.html` (macOS), `xdg-open` (Linux), or `start` (Windows)
+9. Confirm the filename to the user.
 
 ## Step 4: What next
 

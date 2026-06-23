@@ -64,8 +64,6 @@ Render the workload chart as **inline SVG** directly in the HTML (do NOT use a g
 
 Compute arc lengths: circumference at r=45 is 2π×45 ≈ 282.74. Read arc = 282.74 × read_pct / 100. Write arc = 282.74 × write_pct / 100. If delta data exists, add a line below the legend showing the comparison window ratio.
 
-In the **.md report**, show the percentages as plain text: e.g. "**Reads: 82%** / **Writes: 18%**".
-
 ### Overview
 
 | Area | Observation |
