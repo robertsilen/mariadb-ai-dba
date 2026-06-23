@@ -14,6 +14,7 @@ This file defines the structure and quality bar for the `mariadb-audit.md` outpu
 - For **config settings**: write **=** if unchanged. If a value changed, show the previous value (e.g. "was: 128M").
 - For **gauge metrics** (buffer pool pages, connections, checkpoint age): write **=** if unchanged. If changed, show the previous value (e.g. "was: 6,200").
 - For **cumulative counters** (queries, selects, etc.): the Δ column shows the **rate during the comparison window** (delta / elapsed seconds), not the previous raw counter. This contrasts with the "Rate" column which is the lifetime average. Write **=** if the rate is identical.
+- For **computed/derived rows** (e.g. hit ratio, checkpoint age as % of max): compute the previous value from the previous snapshot's underlying metrics and show it. If the underlying metrics are unavailable, write **=** — never write "—" or leave cells blank in the Δ column.
 - In the HTML report, if a Δ value differs from the current value, wrap it in `<span class="delta-changed">` to highlight the change. If unchanged, use `<span class="delta-unchanged">=</span>`.
 - If no deltas are available, **omit the Δ column entirely** — do not show a column of equals signs.
 
@@ -250,6 +251,8 @@ Who can connect, what they can do, and whether the connection is encrypted. This
 Flag column marks: anonymous, wildcard host, empty password, excessive privileges, etc.
 
 ### Security Findings
+
+Present findings in a single table — no summary cards or colored boxes above it.
 
 | # | Severity | Finding |
 |---|----------|---------|

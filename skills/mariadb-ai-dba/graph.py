@@ -6,7 +6,7 @@ Usage:
     python3 graph.py --snapshots-dir ./snapshots --output-dir ./graphs
 
 Reads JSONL daemon samples (1-second resolution) or full snapshot files
-(minutes/hours/days apart) and produces base64-encoded SVG graphs embedded
+(minutes/hours/days apart) and produces base64-encoded PNG graphs embedded
 in a JSON manifest that the report generator can inline into HTML.
 """
 
@@ -250,7 +250,7 @@ GRAPH_DEFS = [
 # ---------------------------------------------------------------------------
 
 def render_graph(graph_def, samples, fig_width=10, fig_height=3.5):
-    """Render a single graph and return base64-encoded SVG string."""
+    """Render a single graph and return base64-encoded PNG string."""
     try:
         import matplotlib
         matplotlib.use("Agg")
@@ -358,11 +358,11 @@ def render_graph(graph_def, samples, fig_width=10, fig_height=3.5):
     plt.tight_layout()
 
     buf = io.BytesIO()
-    fig.savefig(buf, format="svg", bbox_inches="tight", dpi=96)
+    fig.savefig(buf, format="png", bbox_inches="tight", dpi=150)
     plt.close(fig)
 
-    svg_bytes = buf.getvalue()
-    b64 = base64.b64encode(svg_bytes).decode("ascii")
+    png_bytes = buf.getvalue()
+    b64 = base64.b64encode(png_bytes).decode("ascii")
     return b64
 
 
@@ -372,7 +372,7 @@ def render_graph(graph_def, samples, fig_width=10, fig_height=3.5):
 
 def generate_all_graphs(samples_dir=None, snapshots_dir=None,
                         hostname=None, port=None):
-    """Generate all graphs, return dict of {graph_id: {title, section, svg_base64}}."""
+    """Generate all graphs, return dict of {graph_id: {title, section, png_base64}}."""
     samples = []
     source = "none"
 
@@ -393,13 +393,13 @@ def generate_all_graphs(samples_dir=None, snapshots_dir=None,
 
     results = []
     for gdef in GRAPH_DEFS:
-        svg_b64 = render_graph(gdef, samples)
-        if svg_b64:
+        png_b64 = render_graph(gdef, samples)
+        if png_b64:
             results.append({
                 "id": gdef["id"],
                 "title": gdef["title"],
                 "section": gdef["section"],
-                "svg_base64": svg_b64,
+                "png_base64": png_b64,
             })
 
     return {
@@ -415,7 +415,7 @@ def generate_all_graphs(samples_dir=None, snapshots_dir=None,
 
 
 def inject_graphs_into_html(html_path, graphs):
-    """Replace <!-- GRAPH:id --> markers in an HTML file with embedded SVG images."""
+    """Replace <!-- GRAPH:id --> markers in an HTML file with embedded PNG images."""
     with open(html_path) as f:
         html = f.read()
 
@@ -424,7 +424,7 @@ def inject_graphs_into_html(html_path, graphs):
         marker = f"<!-- GRAPH:{g['id']} -->"
         if marker in html:
             img_tag = (
-                f'<img src="data:image/svg+xml;base64,{g["svg_base64"]}" '
+                f'<img src="data:image/png;base64,{g["png_base64"]}" '
                 f'alt="{g["title"]}" '
                 f'style="width:100%;max-width:750px;margin:12px 0;">'
             )
@@ -439,7 +439,7 @@ def inject_graphs_into_html(html_path, graphs):
         marker = f"<!-- GRAPHS:{section} -->"
         if marker in html:
             img_tags = "\n".join(
-                f'<img src="data:image/svg+xml;base64,{g["svg_base64"]}" '
+                f'<img src="data:image/png;base64,{g["png_base64"]}" '
                 f'alt="{g["title"]}" '
                 f'style="width:100%;max-width:750px;margin:12px 0;">'
                 for g in section_graphs
@@ -459,7 +459,7 @@ def main():
     parser.add_argument("--snapshots-dir", help="Path to snapshot JSON directory")
     parser.add_argument("--hostname", help="Filter snapshots by hostname")
     parser.add_argument("--port", type=int, help="Filter snapshots by port")
-    parser.add_argument("--output-dir", help="Write individual SVG files here (optional)")
+    parser.add_argument("--output-dir", help="Write individual PNG files here (optional)")
     parser.add_argument("--inject", help="Inject graphs into this HTML file (replaces <!-- GRAPH:id --> markers)")
     args = parser.parse_args()
 
@@ -482,8 +482,8 @@ def main():
         out_dir = Path(args.output_dir)
         out_dir.mkdir(parents=True, exist_ok=True)
         for g in result["graphs"]:
-            svg_data = base64.b64decode(g["svg_base64"])
-            (out_dir / f"{g['id']}.svg").write_bytes(svg_data)
+            png_data = base64.b64decode(g["png_base64"])
+            (out_dir / f"{g['id']}.png").write_bytes(png_data)
 
     # Summary to stdout (without base64 — keep it small for AI context)
     summary = {

@@ -120,7 +120,7 @@ After writing the HTML file, run:
 python3 skills/mariadb-ai-dba/graph.py --samples-dir ./snapshots/samples --snapshots-dir ./snapshots --hostname {hostname} --port {port} --inject {html_file}
 ```
 
-This replaces the markers with embedded SVG graphs. The stdout output is a small JSON summary (no base64) confirming which graphs were injected. If seaborn is not installed or insufficient data exists, the markers are left as-is (invisible in the browser).
+This replaces the markers with embedded PNG graphs. The stdout output is a small JSON summary (no base64) confirming which graphs were injected. If seaborn is not installed or insufficient data exists, the markers are left as-is (invisible in the browser).
 
 **Do not** load the graph base64 data into context — let the script handle injection directly into the file.
 
@@ -175,7 +175,7 @@ After data collection:
 5. **Keep all template section headers.** Every section header in the template that has an explanation paragraph below it must have that same explanation reproduced verbatim in the report — do not paraphrase, shorten, or replace it with your own text.
 6. Add any additional findings discovered beyond the template's structure
 7. Always include the **Executive Summary** (section 1) to tie everything together
-8. Read `references/mariadb-audit-template.html` for the HTML skeleton with all styling. Write `mariadb-audit_{timestamp}.html` by replacing the body comment with the report content as HTML. The HTML must contain the same content as the .md — including every section explanation paragraph under each header. Use the CSS classes defined in the template (`.badge .critical/.high/.medium/.low`, `.finding`, `.summary-grid`, `.summary-card`, `.note`, `.section-intro`, `pre`, `code`). Do not regenerate or modify the `<style>` block.
+8. Read `references/mariadb-audit-template.html` for the HTML skeleton with all styling. Write `mariadb-audit_{timestamp}.html` by replacing the body comment with the report content as HTML. The HTML must contain the same content as the .md — including every section explanation paragraph under each header. Use the CSS classes defined in the template (`.badge .critical/.high/.medium/.low`, `.finding`, `.note`, `.section-intro`, `pre`, `code`). Do not regenerate or modify the `<style>` block.
 9. Open the HTML file in the default browser: `open mariadb-audit_{timestamp}.html` (macOS), `xdg-open` (Linux), or `start` (Windows)
 10. Confirm both filenames (.md and .html) to the user
 
