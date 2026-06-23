@@ -33,7 +33,21 @@ Keep it brief. No phase numbers.
 
 ## Step 1: Connect
 
-**Ask the user one question: how to connect.** This is the only interactive prompt before data collection begins. Use the `AskUserQuestion` tool:
+Ask the user **two questions** using `AskUserQuestion` before data collection begins.
+
+**Question 1 — Purpose:**
+
+Header: "Purpose"
+
+Question: "What brings you here today?"
+
+Options:
+1. **General overview** (Recommended) — comprehensive server audit
+2. **Investigating a problem** — describe the issue and I'll highlight relevant findings
+
+If the user picks option 2 (or provides a custom answer), they will describe their problem. Save this as the **purpose context** — it will be used later in the Executive Summary. If they pick option 1, the purpose context is empty.
+
+**Question 2 — Connection:**
 
 Header: "Connection"
 
@@ -110,7 +124,6 @@ If the Python collector is unavailable, fall back to the heredoc approach in the
 
 When writing the HTML report, place these comment markers where graphs should appear:
 
-- `<!-- GRAPHS:workload -->` — in the Workload Profile subsection of the Executive Summary
 - `<!-- GRAPHS:innodb -->` — after the Checkpoint Health table, before Connections (section 4)
 - `<!-- GRAPHS:connections -->` — after the Connections table, before Query Performance (section 5)
 - `<!-- GRAPHS:performance -->` — immediately after the Global Counters table, **before** Slow Query Log Configuration

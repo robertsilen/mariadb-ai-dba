@@ -242,15 +242,6 @@ GRAPH_DEFS = [
         "labels": ["Immediate (granted)", "Waited"],
         "ylabel": "locks/sec",
     },
-    # --- Workload profile ---
-    {
-        "id": "workload_ratio",
-        "title": "Read / Write Ratio",
-        "section": "workload",
-        "type": "pie",
-        "read_vars": ["COM_SELECT"],
-        "write_vars": ["COM_INSERT", "COM_UPDATE", "COM_DELETE", "COM_REPLACE"],
-    },
     # --- OS metrics ---
     {
         "id": "os_memory",
@@ -302,62 +293,6 @@ GRAPH_DEFS = [
 # Rendering
 # ---------------------------------------------------------------------------
 
-def _render_pie(graph_def, samples, fig_width=5, fig_height=3):
-    """Render a read/write ratio pie chart from first+last samples."""
-    try:
-        import matplotlib
-        matplotlib.use("Agg")
-        import matplotlib.pyplot as plt
-        import seaborn as sns
-    except ImportError:
-        return None
-
-    sns.set_theme(style="whitegrid", palette="muted", font_scale=0.9)
-
-    first, last = samples[0], samples[-1]
-
-    def sum_vars(sample, var_list):
-        return sum(safe_int(sample.get(v, 0)) for v in var_list)
-
-    reads_total = sum_vars(last, graph_def["read_vars"]) - sum_vars(first, graph_def["read_vars"])
-    writes_total = sum_vars(last, graph_def["write_vars"]) - sum_vars(first, graph_def["write_vars"])
-
-    # Fall back to absolute values if delta is zero (single snapshot)
-    if reads_total + writes_total == 0:
-        reads_total = sum_vars(last, graph_def["read_vars"])
-        writes_total = sum_vars(last, graph_def["write_vars"])
-
-    if reads_total + writes_total == 0:
-        return None
-
-    total = reads_total + writes_total
-    read_pct = reads_total / total * 100
-    write_pct = writes_total / total * 100
-
-    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
-    colors = ["#4a90d9", "#d97a4a"]
-    wedges, texts, autotexts = ax.pie(
-        [reads_total, writes_total],
-        labels=[f"Reads ({read_pct:.0f}%)", f"Writes ({write_pct:.0f}%)"],
-        colors=colors,
-        autopct="",
-        startangle=90,
-        wedgeprops={"linewidth": 1, "edgecolor": "white"},
-    )
-    for t in texts:
-        t.set_fontsize(10)
-    ax.set_title(graph_def["title"], fontsize=11, fontweight="bold", pad=10)
-
-    plt.tight_layout()
-
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", bbox_inches="tight", dpi=150)
-    plt.close(fig)
-
-    png_bytes = buf.getvalue()
-    return base64.b64encode(png_bytes).decode("ascii")
-
-
 def render_graph(graph_def, samples, fig_width=10, fig_height=3.5):
     """Render a single graph and return base64-encoded PNG string."""
     try:
@@ -372,10 +307,6 @@ def render_graph(graph_def, samples, fig_width=10, fig_height=3.5):
     sns.set_theme(style="whitegrid", palette="muted", font_scale=0.9)
 
     graph_type = graph_def["type"]
-
-    # Pie charts are rendered separately — not time-series
-    if graph_type == "pie":
-        return _render_pie(graph_def, samples, fig_width=5, fig_height=3)
 
     if graph_type == "rate":
         series = compute_rates(samples, graph_def["vars"])
