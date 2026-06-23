@@ -12,7 +12,7 @@ MariaDB AI-DBA is an AI-powered database audit tool that connects to a MariaDB s
 
 ### Architecture
 
-The tool is a **Claude Code skill** — an AI instruction file (`SKILL.md`) backed by a Python data collector (`collect.py`) and a graph generator (`graph.py`). The AI reads the collector's JSON output, interprets it using reference files, and writes a structured HTML+Markdown report.
+The tool is a **Claude Code skill** — an AI instruction file (`SKILL.md`) backed by a Python data collector (`collect.py`) and a graph generator (`graph.py`). The AI reads the collector's JSON output, interprets it using reference files, and writes a structured HTML report.
 
 ```
 SKILL.md (AI instructions)
@@ -103,7 +103,7 @@ No within-session wait. The collector takes a single snapshot and computes delta
 
 ### Graph Generation (`graph.py`)
 
-Generates PNG graphs using seaborn/matplotlib from daemon sample data or snapshot history. Currently defines 16 graphs across 5 sections:
+Generates PNG graphs using seaborn/matplotlib from daemon sample data or snapshot history. Currently defines 15 graphs across 4 sections:
 
 | Section | Graphs | Data source |
 |---|---|---|
@@ -117,7 +117,7 @@ Graphs are injected directly into the HTML file via `--inject` mode — the AI n
 
 ### Report Generation
 
-The AI writes both `.md` and `.html` reports using templates in `references/`:
+The AI writes an `.html` report only (no separate .md — the HTML is the primary deliverable, and skipping markdown cuts generation time roughly in half). Templates in `references/`:
 
 - **`mariadb-audit-template.md`** — Report structure, section order, quality bar, Δ column formatting rules
 - **`mariadb-audit-template.html`** — HTML skeleton with all CSS styling
@@ -293,7 +293,7 @@ The **Collection Type** column classifies what kind of data each analysis needs:
 | # | Analysis Path | Collection Type | Source | Decision | Rationale |
 |---|---|---|---|---|---|
 | K1 | **Multi-server comparative view** — accept multiple connection targets, run the collector on each, and produce a summary table comparing key metrics across servers. Highlights asymmetries and outliers | **Snapshot** (per server) | Lefred expertise | CANDIDATE | Consulting reports covering multiple servers include comparison tables. Reveals fleet-wide patterns and outlier servers. Significant architecture change — the skill currently assumes a single server. |
-| K2 | **Backup & recovery assessment** — check binary log retention settings, `SHOW BINARY LOGS` for log retention, detect presence of backup-related tables or plugins. Document backup configuration without verifying execution | **Config** + **Snapshot** | Lefred expertise | CANDIDATE | Every consulting report includes a backup section. Limited by what's detectable from SQL (backups are usually external processes), but retention settings and binary log state are valuable. |
+| K2 | **Backup & recovery assessment** — check binary log retention settings, `SHOW BINARY LOGS` for log retention and total size on disk, detect presence of backup-related tables or plugins. Document backup configuration without verifying execution | **Config** + **Snapshot** | Lefred expertise, [mysql-awesome-stats-collector](https://github.com/k4kratik/mysql-awesome-stats-collector) | CANDIDATE | Every consulting report includes a backup section. Limited by what's detectable from SQL (backups are usually external processes), but retention settings and binary log state are valuable. `SHOW BINARY LOGS` also reveals total binlog disk usage — a common operational concern. |
 | K3 | **Architecture & scalability advisory** — based on observed workload ratio, dataset size, replication topology, and server resources, provide high-level observations about scaling patterns (read replicas, sharding, proxy routing) | **N/A** (AI analysis of collected data) | Lefred expertise | CANDIDATE | Consulting reports include architecture sections. Subjective and advisory, but the data to support observations is already collected. |
 | K4 | **External monitoring integration** — optionally pull trending data from existing monitoring solutions (Prometheus/Grafana API, PMM, Zabbix) instead of or alongside the built-in daemon. Advanced users already have monitoring in place; querying their existing data avoids duplicate collection and provides longer history | **Trending** | Lefred feedback | CANDIDATE | For advanced users with existing monitoring stacks, collecting our own samples is redundant. Integrating with their monitoring API gives access to weeks/months of history. Significant scope — each monitoring system has a different API. |
 

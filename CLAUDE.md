@@ -4,6 +4,4 @@ This repo contains a Claude Code skill. The skill lives in `skills/mariadb-ai-db
 
 ## Running the skill
 
-To use the skill from this repo, read `skills/mariadb-ai-dba/SKILL.md` and follow its instructions directly. Do NOT try to install or symlink it — just read and execute.
-
-When the user says "dba", "run", or "run the skill", treat it as a request to run the skill.
+When the user says "dba", "run", or "run the skill", read `skills/mariadb-ai-dba/SKILL.md` and follow its instructions directly. Do NOT use the Skill tool — the skill is not installed globally, it is local to this repo. Just read SKILL.md and execute.
