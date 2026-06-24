@@ -117,6 +117,8 @@ Pass it to the skill when prompted: choose **Defaults file** and provide the pat
 
 Suggestions and pull requests are welcome. Open an issue or PR at [github.com/mariadb/mariadb-ai-dba](https://github.com/mariadb/mariadb-ai-dba).
 
-## Acknowledgments
+## Credits
+
+MariaDB Foundation AI DBA
 
 Developed by [@robertsilen](https://github.com/robertsilen) based on DBA skills by [@lefred](https://github.com/lefred) and an idea by [@kajarnocom](https://github.com/kajarnocom).
