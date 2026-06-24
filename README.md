@@ -115,7 +115,7 @@ Pass it to the skill when prompted: choose **Defaults file** and provide the pat
 
 ## Contributing
 
-Suggestions and pull requests are welcome.
+Suggestions and pull requests are welcome. See [ROADMAP.md](ROADMAP.md) for architecture details and possible improvements.
 
 ## Credits
 
