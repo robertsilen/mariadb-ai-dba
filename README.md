@@ -6,7 +6,7 @@ An AI-powered database administrator skill for Claude Code. Connects to a MariaD
 
 ## What You Get
 
-A timestamped HTML report covering:
+A timestamped HTML report you can explore further with AI or share with colleagues, covering:
 
 - **Executive Summary** with AI Suggestions tailored to your purpose and Next Steps you can continue exploring in Claude Code
 - **Server overview** — version, uptime, databases, storage engines, memory
