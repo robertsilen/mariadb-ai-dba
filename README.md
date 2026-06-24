@@ -115,7 +115,7 @@ Pass it to the skill when prompted: choose **Defaults file** and provide the pat
 
 ## Contributing
 
-Suggestions and pull requests are welcome. Open an issue or PR at [github.com/mariadb/mariadb-ai-dba](https://github.com/mariadb/mariadb-ai-dba).
+Suggestions and pull requests are welcome.
 
 ## Credits
 
