@@ -44,6 +44,10 @@ def connect(args):
             params["user"] = args.user
         if args.password:
             params["passwd"] = args.password
+        if getattr(args, "ssl", False):
+            params["ssl"] = True
+        if getattr(args, "ssl_verify_cert", False):
+            params["ssl_verify_cert"] = True
     return mariadb.connect(**params)
 
 
@@ -1435,6 +1439,8 @@ Examples:
     conn_group.add_argument("--port", type=int, help="Server port")
     conn_group.add_argument("--user", help="Username")
     conn_group.add_argument("--password", help="Password")
+    conn_group.add_argument("--ssl", action="store_true", help="Use SSL/TLS for the connection")
+    conn_group.add_argument("--ssl-verify-server-cert", dest="ssl_verify_cert", action="store_true", help="Verify SSL server certificate")
 
     parser.add_argument("--snapshots-dir", help="Directory to store snapshot/sample files for trending")
     parser.add_argument("--compare-to", help="Path to a specific snapshot file to compute deltas against")
